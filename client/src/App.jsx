@@ -1,14 +1,17 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { AgentEngine } from './engine/agentEngine.js';
 import Header from './components/Header.jsx';
 import DisclaimerBanner from './components/DisclaimerBanner.jsx';
 import StatsCards from './components/StatsCards.jsx';
 import ControlPanel from './components/ControlPanel.jsx';
 import CurrentRound from './components/CurrentRound.jsx';
 import BetHistory from './components/BetHistory.jsx';
+import PriceChart from './components/PriceChart.jsx';
+import ActivityFeed from './components/ActivityFeed.jsx';
+import AgentWallet from './components/AgentWallet.jsx';
 import Footer from './components/Footer.jsx';
 
 const POLYGON_AMOY_CHAIN_ID = '0x13882';
-const POLL_INTERVAL = 3000;
 
 function LastUpdated({ timestamp }) {
   const [seconds, setSeconds] = useState(0);
@@ -35,14 +38,28 @@ function LastUpdated({ timestamp }) {
 export default function App() {
   const [account, setAccount] = useState(null);
   const [connecting, setConnecting] = useState(false);
-  const [dashboard, setDashboard] = useState(null);
-  const [bets, setBets] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [, setTick] = useState(0); // force re-render on engine changes
   const [lastFetched, setLastFetched] = useState(null);
-  const dashRef = useRef(null);
-  const betsRef = useRef(null);
+  const engineRef = useRef(null);
 
-  // Connect wallet via MetaMask
+  // Initialize engine once
+  if (!engineRef.current) {
+    engineRef.current = new AgentEngine(() => {
+      setTick(t => t + 1);
+      setLastFetched(Date.now());
+    });
+    setLastFetched(Date.now());
+  }
+  const engine = engineRef.current;
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (engineRef.current) engineRef.current.destroy();
+    };
+  }, []);
+
+  // Connect wallet
   const connectWallet = useCallback(async () => {
     if (!window.ethereum) return;
     setConnecting(true);
@@ -76,6 +93,11 @@ export default function App() {
     setConnecting(false);
   }, []);
 
+  // Disconnect wallet
+  const disconnectWallet = useCallback(() => {
+    setAccount(null);
+  }, []);
+
   // Listen for account changes
   useEffect(() => {
     if (!window.ethereum) return;
@@ -87,76 +109,38 @@ export default function App() {
     return () => window.ethereum.removeListener('accountsChanged', handleAccounts);
   }, []);
 
-  // Fetch dashboard + bets (only update state when data actually changes to prevent flicker)
-  const fetchData = useCallback(async () => {
-    try {
-      const [dashRes, betsRes] = await Promise.all([
-        fetch('/api/dashboard'),
-        fetch('/api/bets/history'),
-      ]);
-      let updated = false;
-      if (dashRes.ok) {
-        const text = await dashRes.text();
-        try {
-          const dashData = JSON.parse(text);
-          const dashJson = JSON.stringify(dashData);
-          if (dashJson !== dashRef.current) {
-            dashRef.current = dashJson;
-            setDashboard(dashData);
-            updated = true;
-          }
-        } catch { /* non-JSON response, skip */ }
-      }
-      if (betsRes.ok) {
-        const text = await betsRes.text();
-        try {
-          const betsData = JSON.parse(text);
-          const betsJson = JSON.stringify(betsData);
-          if (betsJson !== betsRef.current) {
-            betsRef.current = betsJson;
-            setBets(betsData);
-            updated = true;
-          }
-        } catch { /* non-JSON response, skip */ }
-      }
-      // Always update timestamp so "X seconds ago" resets
-      setLastFetched(Date.now());
-    } catch {
-      // Retry on next poll
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  // Poll every 3s
-  useEffect(() => {
-    fetchData();
-    const interval = setInterval(fetchData, POLL_INTERVAL);
-    return () => clearInterval(interval);
-  }, [fetchData]);
-
-  const isActive = dashboard?.agentStatus === 'active';
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-dark-bg text-dark-text flex items-center justify-center">
-        <div className="flex flex-col items-center gap-3">
-          <div className="spinner" />
-          <p className="text-sm text-dark-muted">Loading dashboard...</p>
-        </div>
-      </div>
-    );
-  }
+  const dashboard = engine.getDashboard();
+  const bets = engine.getBets();
+  const activityLog = engine.getActivityLog();
+  const priceHistory = engine.getPriceHistory();
+  const isActive = dashboard.agentStatus === 'active';
 
   return (
     <div className="min-h-screen bg-dark-bg text-dark-text">
-      <Header account={account} onConnect={connectWallet} connecting={connecting} />
+      <Header
+        account={account}
+        onConnect={connectWallet}
+        onDisconnect={disconnectWallet}
+        connecting={connecting}
+      />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-5 space-y-4">
         <DisclaimerBanner />
         <LastUpdated timestamp={lastFetched} />
         <StatsCards dashboard={dashboard} bets={bets} />
-        <ControlPanel account={account} dashboard={dashboard} onRefresh={fetchData} />
+        <ControlPanel engine={engine} account={account} dashboard={dashboard} />
+
+        {/* Two-column layout: chart + wallet/activity */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div className="lg:col-span-2">
+            <PriceChart priceHistory={priceHistory} />
+          </div>
+          <div className="space-y-4">
+            <AgentWallet account={account} dashboard={dashboard} />
+            <ActivityFeed log={activityLog} />
+          </div>
+        </div>
+
         {isActive && <CurrentRound bets={bets} />}
         <BetHistory bets={bets} />
       </main>

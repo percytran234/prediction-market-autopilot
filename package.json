@@ -17,6 +17,7 @@
     "ethers": "^6.13.4",
     "express": "^4.21.1",
     "node-cron": "^3.0.3",
+    "recharts": "^3.7.0",
     "sql.js": "^1.14.0"
   },
   "devDependencies": {

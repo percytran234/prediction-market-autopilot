@@ -16,7 +16,6 @@ function Sparkline({ bets }) {
     .reverse();
   if (resolved.length < 2) return null;
 
-  // Build cumulative P&L points
   let cumulative = 0;
   const points = resolved.map(b => {
     cumulative += (b.pnl || 0);
@@ -26,9 +25,7 @@ function Sparkline({ bets }) {
   const min = Math.min(...points);
   const max = Math.max(...points);
   const range = max - min || 1;
-  const w = 100;
-  const h = 28;
-  const pad = 2;
+  const w = 100, h = 28, pad = 2;
 
   const coords = points.map((v, i) => {
     const x = pad + (i / (points.length - 1)) * (w - pad * 2);
@@ -40,8 +37,6 @@ function Sparkline({ bets }) {
   const isPositive = points[points.length - 1] >= 0;
   const stroke = isPositive ? '#22c55e' : '#ef4444';
   const fill = isPositive ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)';
-
-  // Area fill path: close to bottom
   const areaD = `${pathD} L${pad + (w - pad * 2)},${h} L${pad},${h} Z`;
 
   return (
@@ -49,6 +44,22 @@ function Sparkline({ bets }) {
       <path d={areaD} fill={fill} />
       <path d={pathD} fill="none" stroke={stroke} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
+  );
+}
+
+function WinRateBar({ winRate }) {
+  return (
+    <div className="w-full h-1.5 bg-dark-border rounded-full mt-2 overflow-hidden">
+      <div
+        className="h-full rounded-full transition-all duration-500"
+        style={{
+          width: `${Math.min(100, Math.max(0, winRate))}%`,
+          background: winRate >= 50
+            ? `linear-gradient(90deg, #22c55e, #4ade80)`
+            : `linear-gradient(90deg, #ef4444, #f87171)`,
+        }}
+      />
+    </div>
   );
 }
 
@@ -63,6 +74,8 @@ export default function StatsCards({ dashboard, bets }) {
     losses = 0,
     agentStatus = 'idle',
     stopReason,
+    activeBets = 0,
+    successRate = 0,
   } = dashboard || {};
 
   const pnlColor = pnl >= 0 ? 'text-accent-green' : 'text-accent-red';
@@ -93,7 +106,7 @@ export default function StatsCards({ dashboard, bets }) {
         </p>
       </Card>
 
-      <Card label="Today's P&L" glow>
+      <Card label="Total P&L" glow>
         <p className={`text-2xl font-bold tabular-nums stat-value ${pnlColor}`}>
           {pnlSign}${Math.abs(pnl).toFixed(2)}
         </p>
@@ -108,6 +121,7 @@ export default function StatsCards({ dashboard, bets }) {
         <p className="text-xs text-dark-muted mt-0.5">
           {wins}W / {losses}L of {totalBets} bets
         </p>
+        <WinRateBar winRate={winRate} />
       </Card>
 
       <Card label="Agent Status">
@@ -122,6 +136,12 @@ export default function StatsCards({ dashboard, bets }) {
         {stopReason && (
           <p className="text-xs text-dark-muted mt-1">
             {reasonLabels[stopReason] || stopReason}
+          </p>
+        )}
+        {activeBets > 0 && (
+          <p className="text-xs text-accent-blue mt-1 flex items-center gap-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-accent-blue animate-pulse inline-block" />
+            {activeBets} bet{activeBets !== 1 ? 's' : ''} pending
           </p>
         )}
       </Card>

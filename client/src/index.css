@@ -97,3 +97,15 @@ body {
 .bet-row-enter {
   animation: bet-fade-in 0.35s ease-out both;
 }
+
+/* Thin scrollbar for nested scrollable areas */
+.scrollbar-thin::-webkit-scrollbar {
+  width: 4px;
+}
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: #2a2d3a;
+  border-radius: 2px;
+}

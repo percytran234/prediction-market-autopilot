@@ -1,9 +1,7 @@
 import React from 'react';
 
-const POLYGON_AMOY_CHAIN_ID = '0x13882';
-
-export default function Header({ account, onConnect, connecting }) {
-  async function handleConnect() {
+export default function Header({ account, onConnect, onDisconnect, connecting }) {
+  function handleConnect() {
     if (!window.ethereum) {
       alert('Please install MetaMask to connect your wallet.');
       return;
@@ -27,9 +25,18 @@ export default function Header({ account, onConnect, connecting }) {
         </div>
 
         {account ? (
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-dark-bg rounded-lg border border-dark-border">
-            <div className="w-2 h-2 rounded-full bg-accent-green animate-pulse" />
-            <span className="text-sm font-mono text-dark-muted">{truncated}</span>
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-dark-bg rounded-lg border border-dark-border">
+              <div className="w-2 h-2 rounded-full bg-accent-green animate-pulse" />
+              <span className="text-sm font-mono text-dark-muted">{truncated}</span>
+            </div>
+            <button
+              onClick={onDisconnect}
+              className="px-3 py-1.5 text-xs text-dark-muted border border-dark-border rounded-lg hover:bg-accent-red/10 hover:text-accent-red hover:border-accent-red/30 transition-colors"
+              title="Disconnect wallet"
+            >
+              Disconnect
+            </button>
           </div>
         ) : (
           <button
