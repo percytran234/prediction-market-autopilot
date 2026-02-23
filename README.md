@@ -344,5 +344,3 @@ Worst case:  -10%/day (daily loss limit protects)
 | V3.0 | Mainnet production deployment + MPC key management |
 
 ---
-
-*This spec was generated using Claude AI — pending Lucas review on Day 1.*
