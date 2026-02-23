@@ -10,12 +10,35 @@ import Footer from './components/Footer.jsx';
 const POLYGON_AMOY_CHAIN_ID = '0x13882';
 const POLL_INTERVAL = 3000;
 
+function LastUpdated({ timestamp }) {
+  const [seconds, setSeconds] = useState(0);
+
+  useEffect(() => {
+    if (!timestamp) return;
+    setSeconds(0);
+    const interval = setInterval(() => {
+      setSeconds(Math.floor((Date.now() - timestamp) / 1000));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [timestamp]);
+
+  if (!timestamp) return null;
+
+  return (
+    <div className="flex items-center justify-end gap-1.5 text-[11px] text-dark-muted tabular-nums">
+      <span className="inline-block w-3 h-3 opacity-60">&#x1F504;</span>
+      <span>Updated {seconds < 2 ? 'just now' : `${seconds}s ago`}</span>
+    </div>
+  );
+}
+
 export default function App() {
   const [account, setAccount] = useState(null);
   const [connecting, setConnecting] = useState(false);
   const [dashboard, setDashboard] = useState(null);
   const [bets, setBets] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [lastFetched, setLastFetched] = useState(null);
   const dashRef = useRef(null);
   const betsRef = useRef(null);
 
@@ -71,6 +94,7 @@ export default function App() {
         fetch('/api/dashboard'),
         fetch('/api/bets/history'),
       ]);
+      let updated = false;
       if (dashRes.ok) {
         const text = await dashRes.text();
         try {
@@ -79,6 +103,7 @@ export default function App() {
           if (dashJson !== dashRef.current) {
             dashRef.current = dashJson;
             setDashboard(dashData);
+            updated = true;
           }
         } catch { /* non-JSON response, skip */ }
       }
@@ -90,9 +115,12 @@ export default function App() {
           if (betsJson !== betsRef.current) {
             betsRef.current = betsJson;
             setBets(betsData);
+            updated = true;
           }
         } catch { /* non-JSON response, skip */ }
       }
+      // Always update timestamp so "X seconds ago" resets
+      setLastFetched(Date.now());
     } catch {
       // Retry on next poll
     } finally {
@@ -126,7 +154,8 @@ export default function App() {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-5 space-y-4">
         <DisclaimerBanner />
-        <StatsCards dashboard={dashboard} />
+        <LastUpdated timestamp={lastFetched} />
+        <StatsCards dashboard={dashboard} bets={bets} />
         <ControlPanel account={account} dashboard={dashboard} onRefresh={fetchData} />
         {isActive && <CurrentRound bets={bets} />}
         <BetHistory bets={bets} />

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 
 function formatTime(iso) {
   if (!iso) return '—';
@@ -21,6 +21,32 @@ function formatPnl(val) {
 }
 
 export default function BetHistory({ bets }) {
+  // Track which bet IDs are "new" for fade-in animation
+  const knownIds = useRef(new Set());
+  const [newIds, setNewIds] = useState(new Set());
+
+  useEffect(() => {
+    if (!bets || bets.length === 0) return;
+    const incoming = new Set();
+    for (const bet of bets) {
+      if (!knownIds.current.has(bet.id)) {
+        incoming.add(bet.id);
+      }
+    }
+    // On first load, mark all as known (no animation)
+    if (knownIds.current.size === 0) {
+      for (const bet of bets) knownIds.current.add(bet.id);
+      return;
+    }
+    if (incoming.size > 0) {
+      setNewIds(incoming);
+      for (const id of incoming) knownIds.current.add(id);
+      // Clear animation class after it finishes
+      const timer = setTimeout(() => setNewIds(new Set()), 400);
+      return () => clearTimeout(timer);
+    }
+  }, [bets]);
+
   if (!bets || bets.length === 0) {
     return (
       <div className="bg-dark-card border border-dark-border rounded-xl p-6">
@@ -57,12 +83,15 @@ export default function BetHistory({ bets }) {
               const isLoss = bet.result === 'LOSS';
               const isSkip = bet.result === 'SKIP';
               const isPending = bet.result === 'PENDING';
+              const isNew = newIds.has(bet.id);
 
               const rowBg = isWin
-                ? 'bg-accent-green/[0.04] hover:bg-accent-green/[0.08]'
+                ? 'bg-accent-green/[0.04] hover:bg-accent-green/10'
                 : isLoss
-                ? 'bg-accent-red/[0.04] hover:bg-accent-red/[0.08]'
-                : 'hover:bg-dark-hover';
+                ? 'bg-accent-red/[0.04] hover:bg-accent-red/10'
+                : isPending
+                ? 'bg-accent-blue/[0.03] hover:bg-accent-blue/[0.07]'
+                : 'hover:bg-[#1e2130]';
 
               const dirIcon = bet.direction === 'UP' ? '🟢'
                 : bet.direction === 'DOWN' ? '🔴'
@@ -79,7 +108,10 @@ export default function BetHistory({ bets }) {
               const pnlColor = bet.pnl > 0 ? 'text-accent-green' : bet.pnl < 0 ? 'text-accent-red' : 'text-dark-muted';
 
               return (
-                <tr key={bet.id} className={`border-b border-dark-border/50 transition-colors ${rowBg}`}>
+                <tr
+                  key={bet.id}
+                  className={`border-b border-dark-border/50 transition-colors duration-150 ${rowBg} ${isNew ? 'bet-row-enter' : ''}`}
+                >
                   <td className="px-4 py-2.5 text-dark-muted tabular-nums whitespace-nowrap">
                     {formatTime(bet.round_time)}
                   </td>
