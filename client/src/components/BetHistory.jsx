@@ -1,0 +1,117 @@
+import React from 'react';
+
+function formatTime(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+}
+
+function formatPrice(val) {
+  if (val == null) return '—';
+  return `$${parseFloat(val).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+function formatPnl(val) {
+  if (val == null || val === 0) return '—';
+  const sign = val > 0 ? '+' : '';
+  return `${sign}$${val.toFixed(2)}`;
+}
+
+export default function BetHistory({ bets }) {
+  if (!bets || bets.length === 0) {
+    return (
+      <div className="bg-dark-card border border-dark-border rounded-xl p-6">
+        <h3 className="text-sm font-semibold text-dark-muted uppercase tracking-wider mb-4">Bet History</h3>
+        <p className="text-sm text-dark-muted text-center py-8">No bets yet. Start the agent to begin trading.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-dark-card border border-dark-border rounded-xl overflow-hidden">
+      <div className="px-4 py-3 border-b border-dark-border">
+        <h3 className="text-sm font-semibold text-dark-muted uppercase tracking-wider">Bet History</h3>
+      </div>
+
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-dark-border text-xs text-dark-muted uppercase tracking-wider">
+              <th className="text-left px-4 py-2.5 font-medium">Time</th>
+              <th className="text-left px-4 py-2.5 font-medium">Direction</th>
+              <th className="text-right px-4 py-2.5 font-medium">Confidence</th>
+              <th className="text-right px-4 py-2.5 font-medium">Amount</th>
+              <th className="text-right px-4 py-2.5 font-medium">BTC Entry</th>
+              <th className="text-right px-4 py-2.5 font-medium">BTC Exit</th>
+              <th className="text-center px-4 py-2.5 font-medium">Result</th>
+              <th className="text-right px-4 py-2.5 font-medium">P&L</th>
+              <th className="text-right px-4 py-2.5 font-medium">Balance</th>
+            </tr>
+          </thead>
+          <tbody>
+            {bets.map((bet) => {
+              const isWin = bet.result === 'WIN';
+              const isLoss = bet.result === 'LOSS';
+              const isSkip = bet.result === 'SKIP';
+              const isPending = bet.result === 'PENDING';
+
+              const rowBg = isWin
+                ? 'bg-accent-green/[0.04] hover:bg-accent-green/[0.08]'
+                : isLoss
+                ? 'bg-accent-red/[0.04] hover:bg-accent-red/[0.08]'
+                : 'hover:bg-dark-hover';
+
+              const dirIcon = bet.direction === 'UP' ? '🟢'
+                : bet.direction === 'DOWN' ? '🔴'
+                : '⚪';
+
+              const resultBadge = isWin
+                ? 'bg-accent-green/15 text-accent-green'
+                : isLoss
+                ? 'bg-accent-red/15 text-accent-red'
+                : isPending
+                ? 'bg-accent-blue/15 text-accent-blue'
+                : 'bg-dark-border text-dark-muted';
+
+              const pnlColor = bet.pnl > 0 ? 'text-accent-green' : bet.pnl < 0 ? 'text-accent-red' : 'text-dark-muted';
+
+              return (
+                <tr key={bet.id} className={`border-b border-dark-border/50 transition-colors ${rowBg}`}>
+                  <td className="px-4 py-2.5 text-dark-muted tabular-nums whitespace-nowrap">
+                    {formatTime(bet.round_time)}
+                  </td>
+                  <td className="px-4 py-2.5 whitespace-nowrap">
+                    {dirIcon} {bet.direction}
+                  </td>
+                  <td className="px-4 py-2.5 text-right tabular-nums text-dark-muted">
+                    {bet.confidence != null ? `${bet.confidence.toFixed(1)}%` : '—'}
+                  </td>
+                  <td className="px-4 py-2.5 text-right tabular-nums">
+                    {isSkip ? '—' : `$${bet.amount?.toFixed(2)}`}
+                  </td>
+                  <td className="px-4 py-2.5 text-right tabular-nums text-dark-muted">
+                    {isSkip ? '—' : formatPrice(bet.btc_price_start)}
+                  </td>
+                  <td className="px-4 py-2.5 text-right tabular-nums text-dark-muted">
+                    {isSkip || isPending ? '—' : formatPrice(bet.btc_price_end)}
+                  </td>
+                  <td className="px-4 py-2.5 text-center">
+                    <span className={`inline-block text-xs font-medium px-2 py-0.5 rounded-full ${resultBadge}`}>
+                      {bet.result}
+                    </span>
+                  </td>
+                  <td className={`px-4 py-2.5 text-right tabular-nums font-medium ${pnlColor}`}>
+                    {isSkip ? '—' : formatPnl(bet.pnl)}
+                  </td>
+                  <td className="px-4 py-2.5 text-right tabular-nums">
+                    ${bet.bankroll_after?.toFixed(2)}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
