@@ -3,7 +3,10 @@ import React from 'react';
 function formatTime(iso) {
   if (!iso) return '—';
   const d = new Date(iso);
-  return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  const h = String(d.getHours()).padStart(2, '0');
+  const m = String(d.getMinutes()).padStart(2, '0');
+  const s = String(d.getSeconds()).padStart(2, '0');
+  return `${h}:${m}:${s}`;
 }
 
 function formatPrice(val) {
@@ -12,9 +15,9 @@ function formatPrice(val) {
 }
 
 function formatPnl(val) {
-  if (val == null || val === 0) return '—';
-  const sign = val > 0 ? '+' : '';
-  return `${sign}$${val.toFixed(2)}`;
+  if (val == null) return '—';
+  const sign = val > 0 ? '+' : val < 0 ? '' : '';
+  return `${sign}$${Number(val).toFixed(2)}`;
 }
 
 export default function BetHistory({ bets }) {
@@ -84,10 +87,10 @@ export default function BetHistory({ bets }) {
                     {dirIcon} {bet.direction}
                   </td>
                   <td className="px-4 py-2.5 text-right tabular-nums text-dark-muted">
-                    {bet.confidence != null ? `${bet.confidence.toFixed(1)}%` : '—'}
+                    {bet.confidence != null ? `${Number(bet.confidence).toFixed(1)}%` : '—'}
                   </td>
                   <td className="px-4 py-2.5 text-right tabular-nums">
-                    {isSkip ? '—' : `$${bet.amount?.toFixed(2)}`}
+                    {isSkip ? '—' : `$${Number(bet.amount || 0).toFixed(2)}`}
                   </td>
                   <td className="px-4 py-2.5 text-right tabular-nums text-dark-muted">
                     {isSkip ? '—' : formatPrice(bet.btc_price_start)}
@@ -104,7 +107,7 @@ export default function BetHistory({ bets }) {
                     {isSkip ? '—' : formatPnl(bet.pnl)}
                   </td>
                   <td className="px-4 py-2.5 text-right tabular-nums">
-                    ${bet.bankroll_after?.toFixed(2)}
+                    ${Number(bet.bankroll_after || 0).toFixed(2)}
                   </td>
                 </tr>
               );

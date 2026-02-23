@@ -25,4 +25,10 @@ app.use(agentRoutes);
 app.use(dashboardRoutes);
 app.use(signalRoutes);
 
+// Catch-all error handler — always return JSON
+app.use((err, req, res, _next) => {
+  console.error('Unhandled error:', err);
+  res.status(500).json({ error: 'Internal server error' });
+});
+
 export default app;

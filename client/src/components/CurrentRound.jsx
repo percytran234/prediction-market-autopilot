@@ -23,15 +23,15 @@ export default function CurrentRound({ bets }) {
         </div>
         <div>
           <p className="text-xs text-dark-muted mb-1">Amount</p>
-          <p className="font-semibold">${pendingBet.amount?.toFixed(2)}</p>
+          <p className="font-semibold">${Number(pendingBet.amount || 0).toFixed(2)}</p>
         </div>
         <div>
           <p className="text-xs text-dark-muted mb-1">Confidence</p>
-          <p className="font-semibold">{pendingBet.confidence?.toFixed(1)}%</p>
+          <p className="font-semibold">{Number(pendingBet.confidence || 0).toFixed(1)}%</p>
         </div>
         <div>
           <p className="text-xs text-dark-muted mb-1">BTC Entry</p>
-          <p className="font-semibold tabular-nums">${pendingBet.btc_price_start?.toFixed(2)}</p>
+          <p className="font-semibold tabular-nums">${Number(pendingBet.btc_price_start || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
         </div>
       </div>
     </div>

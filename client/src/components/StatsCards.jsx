@@ -45,20 +45,22 @@ export default function StatsCards({ dashboard }) {
   return (
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
       <Card label="Bankroll">
-        <p className="text-2xl font-bold tabular-nums">${bankroll.toFixed(2)}</p>
+        <p className="text-2xl font-bold tabular-nums stat-value">
+          ${Number(bankroll).toFixed(2)}
+        </p>
       </Card>
 
       <Card label="Today's P&L">
-        <p className={`text-2xl font-bold tabular-nums ${pnlColor}`}>
+        <p className={`text-2xl font-bold tabular-nums stat-value ${pnlColor}`}>
           {pnlSign}${Math.abs(pnl).toFixed(2)}
         </p>
-        <p className={`text-xs mt-0.5 ${pnlColor}`}>
-          {pnlSign}{pnlPercent.toFixed(2)}%
+        <p className={`text-xs mt-0.5 stat-value ${pnlColor}`}>
+          {pnlSign}{Number(pnlPercent).toFixed(2)}%
         </p>
       </Card>
 
       <Card label="Win Rate">
-        <p className="text-2xl font-bold tabular-nums">{winRate.toFixed(0)}%</p>
+        <p className="text-2xl font-bold tabular-nums">{Number(winRate).toFixed(0)}%</p>
         <p className="text-xs text-dark-muted mt-0.5">
           {wins}W / {losses}L of {totalBets} bets
         </p>
@@ -67,7 +69,7 @@ export default function StatsCards({ dashboard }) {
       <Card label="Agent Status">
         <div className="flex items-center gap-2">
           <span className="text-lg">{status.icon}</span>
-          <span className={`text-lg font-bold ${status.color}`}>{status.label}</span>
+          <span className={`text-lg font-bold stat-value ${status.color}`}>{status.label}</span>
         </div>
         {stopReason && (
           <p className="text-xs text-dark-muted mt-1">

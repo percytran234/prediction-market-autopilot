@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Header from './components/Header.jsx';
 import DisclaimerBanner from './components/DisclaimerBanner.jsx';
 import StatsCards from './components/StatsCards.jsx';
@@ -15,6 +15,9 @@ export default function App() {
   const [connecting, setConnecting] = useState(false);
   const [dashboard, setDashboard] = useState(null);
   const [bets, setBets] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const dashRef = useRef(null);
+  const betsRef = useRef(null);
 
   // Connect wallet via MetaMask
   const connectWallet = useCallback(async () => {
@@ -61,17 +64,39 @@ export default function App() {
     return () => window.ethereum.removeListener('accountsChanged', handleAccounts);
   }, []);
 
-  // Fetch dashboard + bets
+  // Fetch dashboard + bets (only update state when data actually changes to prevent flicker)
   const fetchData = useCallback(async () => {
     try {
       const [dashRes, betsRes] = await Promise.all([
         fetch('/api/dashboard'),
         fetch('/api/bets/history'),
       ]);
-      if (dashRes.ok) setDashboard(await dashRes.json());
-      if (betsRes.ok) setBets(await betsRes.json());
+      if (dashRes.ok) {
+        const text = await dashRes.text();
+        try {
+          const dashData = JSON.parse(text);
+          const dashJson = JSON.stringify(dashData);
+          if (dashJson !== dashRef.current) {
+            dashRef.current = dashJson;
+            setDashboard(dashData);
+          }
+        } catch { /* non-JSON response, skip */ }
+      }
+      if (betsRes.ok) {
+        const text = await betsRes.text();
+        try {
+          const betsData = JSON.parse(text);
+          const betsJson = JSON.stringify(betsData);
+          if (betsJson !== betsRef.current) {
+            betsRef.current = betsJson;
+            setBets(betsData);
+          }
+        } catch { /* non-JSON response, skip */ }
+      }
     } catch {
       // Retry on next poll
+    } finally {
+      setLoading(false);
     }
   }, []);
 
@@ -83,6 +108,17 @@ export default function App() {
   }, [fetchData]);
 
   const isActive = dashboard?.agentStatus === 'active';
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-dark-bg text-dark-text flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="spinner" />
+          <p className="text-sm text-dark-muted">Loading dashboard...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-dark-bg text-dark-text">
