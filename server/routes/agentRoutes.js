@@ -1,18 +1,65 @@
 import { Router } from 'express';
+import { startAgent, stopAgent, getAgentStatus } from '../agent/agentLoop.js';
+import { createSession, getLatestSession, updateSession } from '../db/models.js';
 
 const router = Router();
 
-// Placeholder — will be implemented in Phase 4
 router.post('/api/agent/start', (req, res) => {
-  res.json({});
+  try {
+    const { userAddress, bankroll } = req.body;
+
+    const status = getAgentStatus();
+    if (status.isActive) {
+      return res.status(400).json({ error: 'Agent already running' });
+    }
+
+    // Create or reuse session
+    let session = getLatestSession();
+    if (!session || session.status === 'stopped') {
+      const depositAmount = bankroll || 100;
+      const sessionId = createSession(userAddress || '0x0', depositAmount);
+      session = { id: sessionId, bankroll: depositAmount };
+    } else {
+      updateSession(session.id, { status: 'active', stop_reason: null });
+    }
+
+    startAgent(session.id);
+    res.json({ success: true, sessionId: session.id });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 router.post('/api/agent/stop', (req, res) => {
-  res.json({});
+  try {
+    stopAgent('USER_STOPPED');
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 router.get('/api/agent/status', (req, res) => {
-  res.json({});
+  try {
+    const status = getAgentStatus();
+    const session = getLatestSession();
+
+    if (!session) {
+      return res.json({ ...status, session: null });
+    }
+
+    res.json({
+      ...status,
+      session: {
+        id: session.id,
+        bankroll: session.bankroll,
+        status: session.status,
+        stopReason: session.stop_reason,
+      },
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 export default router;
