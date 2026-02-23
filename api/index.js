@@ -1,11 +1,10 @@
 import express from 'express';
 import cors from 'cors';
-import { config } from './config.js';
-import { getDb } from './db/database.js';
-import walletRoutes from './routes/walletRoutes.js';
-import agentRoutes from './routes/agentRoutes.js';
-import dashboardRoutes from './routes/dashboardRoutes.js';
-import signalRoutes from './routes/signalRoutes.js';
+import { getDb } from '../server/db/database.js';
+import walletRoutes from '../server/routes/walletRoutes.js';
+import agentRoutes from '../server/routes/agentRoutes.js';
+import dashboardRoutes from '../server/routes/dashboardRoutes.js';
+import signalRoutes from '../server/routes/signalRoutes.js';
 
 const app = express();
 
@@ -32,6 +31,4 @@ app.use((err, req, res, _next) => {
   res.status(500).json({ error: 'Internal server error' });
 });
 
-app.listen(config.port, '0.0.0.0', () => {
-  console.log(`Server running on port ${config.port}`);
-});
+export default app;

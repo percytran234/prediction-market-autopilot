@@ -1,77 +1,151 @@
-import React from 'react';
-import { useWallet } from './hooks/useWallet.js';
-import { useDashboard } from './hooks/useDashboard.js';
-import ConnectWallet from './components/ConnectWallet.jsx';
-import DepositPanel from './components/DepositPanel.jsx';
-import StrategySelector from './components/StrategySelector.jsx';
-import AgentControl from './components/AgentControl.jsx';
-import DashboardCards from './components/DashboardCards.jsx';
-import BetHistoryTable from './components/BetHistoryTable.jsx';
-import WithdrawPanel from './components/WithdrawPanel.jsx';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { AgentEngine } from './engine/agentEngine.js';
+import Header from './components/Header.jsx';
+import DisclaimerBanner from './components/DisclaimerBanner.jsx';
+import StatsCards from './components/StatsCards.jsx';
+import ControlPanel from './components/ControlPanel.jsx';
+import CurrentRound from './components/CurrentRound.jsx';
+import BetHistory from './components/BetHistory.jsx';
+import PriceChart from './components/PriceChart.jsx';
+import ActivityFeed from './components/ActivityFeed.jsx';
+import AgentWallet from './components/AgentWallet.jsx';
+import Footer from './components/Footer.jsx';
+
+const POLYGON_AMOY_CHAIN_ID = '0x13882';
+
+function LastUpdated({ timestamp }) {
+  const [seconds, setSeconds] = useState(0);
+
+  useEffect(() => {
+    if (!timestamp) return;
+    setSeconds(0);
+    const interval = setInterval(() => {
+      setSeconds(Math.floor((Date.now() - timestamp) / 1000));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [timestamp]);
+
+  if (!timestamp) return null;
+
+  return (
+    <div className="flex items-center justify-end gap-1.5 text-[11px] text-dark-muted tabular-nums">
+      <span className="inline-block w-3 h-3 opacity-60">&#x1F504;</span>
+      <span>Updated {seconds < 2 ? 'just now' : `${seconds}s ago`}</span>
+    </div>
+  );
+}
 
 export default function App() {
-  const wallet = useWallet();
-  const { dashboard, bets, agentStatus, loading, refetch } = useDashboard(5000);
+  const [account, setAccount] = useState(null);
+  const [connecting, setConnecting] = useState(false);
+  const [, setTick] = useState(0); // force re-render on engine changes
+  const [lastFetched, setLastFetched] = useState(null);
+  const engineRef = useRef(null);
+
+  // Initialize engine once
+  if (!engineRef.current) {
+    engineRef.current = new AgentEngine(() => {
+      setTick(t => t + 1);
+      setLastFetched(Date.now());
+    });
+    setLastFetched(Date.now());
+  }
+  const engine = engineRef.current;
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (engineRef.current) engineRef.current.destroy();
+    };
+  }, []);
+
+  // Connect wallet
+  const connectWallet = useCallback(async () => {
+    if (!window.ethereum) return;
+    setConnecting(true);
+    try {
+      const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+      if (accounts.length > 0) {
+        setAccount(accounts[0]);
+        try {
+          await window.ethereum.request({
+            method: 'wallet_switchEthereumChain',
+            params: [{ chainId: POLYGON_AMOY_CHAIN_ID }],
+          });
+        } catch (switchErr) {
+          if (switchErr.code === 4902) {
+            await window.ethereum.request({
+              method: 'wallet_addEthereumChain',
+              params: [{
+                chainId: POLYGON_AMOY_CHAIN_ID,
+                chainName: 'Polygon Amoy Testnet',
+                nativeCurrency: { name: 'MATIC', symbol: 'MATIC', decimals: 18 },
+                rpcUrls: ['https://rpc-amoy.polygon.technology/'],
+                blockExplorerUrls: ['https://amoy.polygonscan.com/'],
+              }],
+            });
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Wallet connection failed:', err);
+    }
+    setConnecting(false);
+  }, []);
+
+  // Disconnect wallet
+  const disconnectWallet = useCallback(() => {
+    setAccount(null);
+  }, []);
+
+  // Listen for account changes
+  useEffect(() => {
+    if (!window.ethereum) return;
+    const handleAccounts = (accounts) => {
+      setAccount(accounts.length > 0 ? accounts[0] : null);
+    };
+    window.ethereum.on('accountsChanged', handleAccounts);
+    window.ethereum.request({ method: 'eth_accounts' }).then(handleAccounts);
+    return () => window.ethereum.removeListener('accountsChanged', handleAccounts);
+  }, []);
+
+  const dashboard = engine.getDashboard();
+  const bets = engine.getBets();
+  const activityLog = engine.getActivityLog();
+  const priceHistory = engine.getPriceHistory();
+  const isActive = dashboard.agentStatus === 'active';
 
   return (
     <div className="min-h-screen bg-dark-bg text-dark-text">
-      {/* Header */}
-      <header className="border-b border-dark-border">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <h1 className="text-xl font-bold">Prediction Auto-Pilot</h1>
-            <span className="text-xs px-2 py-0.5 bg-accent-blue/20 text-accent-blue rounded-full">
-              DEMO
-            </span>
+      <Header
+        account={account}
+        onConnect={connectWallet}
+        onDisconnect={disconnectWallet}
+        connecting={connecting}
+      />
+
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-5 space-y-4">
+        <DisclaimerBanner />
+        <LastUpdated timestamp={lastFetched} />
+        <StatsCards dashboard={dashboard} bets={bets} />
+        <ControlPanel engine={engine} account={account} dashboard={dashboard} />
+
+        {/* Two-column layout: chart + wallet/activity */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div className="lg:col-span-2">
+            <PriceChart priceHistory={priceHistory} />
           </div>
-          <ConnectWallet
-            account={wallet.account}
-            connecting={wallet.connecting}
-            error={wallet.error}
-            onConnect={wallet.connect}
-            isCorrectChain={wallet.isCorrectChain}
-          />
+          <div className="space-y-4">
+            <AgentWallet account={account} dashboard={dashboard} />
+            <ActivityFeed log={activityLog} />
+          </div>
         </div>
-      </header>
 
-      {/* Main */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
-        {loading ? (
-          <div className="text-center py-12 text-dark-muted">Loading dashboard...</div>
-        ) : (
-          <>
-            {/* Dashboard Cards */}
-            <DashboardCards dashboard={dashboard} />
-
-            {/* Controls Row */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-              <AgentControl
-                agentStatus={agentStatus}
-                dashboard={dashboard}
-                account={wallet.account}
-                onAction={refetch}
-              />
-              <StrategySelector />
-              <div className="space-y-4">
-                <DepositPanel account={wallet.account} />
-                <WithdrawPanel account={wallet.account} dashboard={dashboard} />
-              </div>
-            </div>
-
-            {/* Bet History */}
-            <BetHistoryTable bets={bets} />
-          </>
-        )}
+        {isActive && <CurrentRound bets={bets} />}
+        <BetHistory bets={bets} />
       </main>
 
-      {/* Footer */}
-      <footer className="border-t border-dark-border mt-12 py-6">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 text-center text-xs text-dark-muted">
-          This is a demo tool. Not financial advice. Only use funds you can afford to lose.
-          <br />
-          Mock mode — uses real BTC price data, simulated bets.
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }

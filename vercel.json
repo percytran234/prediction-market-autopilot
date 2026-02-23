@@ -1,0 +1,14 @@
+{
+  "version": 2,
+  "buildCommand": "npx vite build --config client/vite.config.js",
+  "outputDirectory": "dist",
+  "functions": {
+    "api/index.js": {
+      "includeFiles": "node_modules/sql.js/dist/**"
+    }
+  },
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "/api" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}

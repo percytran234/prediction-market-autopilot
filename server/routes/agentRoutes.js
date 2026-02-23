@@ -1,6 +1,6 @@
 import { Router } from 'express';
-import { startAgentLoop, stopAgentLoop, getAgentStatus } from '../agent/agentLoop.js';
-import { createSession, getLatestSession, updateSession, getActiveSession } from '../db/models.js';
+import { startAgent, stopAgent, getAgentStatus } from '../agent/agentLoop.js';
+import { createSession, getLatestSession, updateSession } from '../db/models.js';
 
 const router = Router();
 
@@ -8,7 +8,6 @@ router.post('/api/agent/start', (req, res) => {
   try {
     const { userAddress, bankroll } = req.body;
 
-    // Check if already running
     const status = getAgentStatus();
     if (status.isActive) {
       return res.status(400).json({ error: 'Agent already running' });
@@ -19,12 +18,12 @@ router.post('/api/agent/start', (req, res) => {
     if (!session || session.status === 'stopped') {
       const depositAmount = bankroll || 100;
       const sessionId = createSession(userAddress || '0x0', depositAmount);
-      session = { id: sessionId };
+      session = { id: sessionId, bankroll: depositAmount };
     } else {
       updateSession(session.id, { status: 'active', stop_reason: null });
     }
 
-    startAgentLoop(session.id);
+    startAgent(session.id);
     res.json({ success: true, sessionId: session.id });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -33,7 +32,7 @@ router.post('/api/agent/start', (req, res) => {
 
 router.post('/api/agent/stop', (req, res) => {
   try {
-    stopAgentLoop('USER_STOPPED');
+    stopAgent('USER_STOPPED');
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -43,13 +42,20 @@ router.post('/api/agent/stop', (req, res) => {
 router.get('/api/agent/status', (req, res) => {
   try {
     const status = getAgentStatus();
-    const session = status.sessionId
-      ? (() => { try { return getActiveSession() || getLatestSession(); } catch { return null; } })()
-      : getLatestSession();
+    const session = getLatestSession();
+
+    if (!session) {
+      return res.json({ ...status, session: null });
+    }
 
     res.json({
       ...status,
-      session: session || null,
+      session: {
+        id: session.id,
+        bankroll: session.bankroll,
+        status: session.status,
+        stopReason: session.stop_reason,
+      },
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
