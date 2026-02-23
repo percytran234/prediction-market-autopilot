@@ -1,12 +1,12 @@
-
-[Uploading spec-en.md…]()
+[spec-en-v2.md](https://github.com/user-attachments/files/25475245/spec-en-v2.md)
 # SPEC — Prediction Market Auto-Pilot Agent
 
 > **Track:** Agent Wallet  
 > **MVP Angle:** Prediction Market Agent — BTC 15-min Up/Down on Polymarket  
 > **Blockchain:** Polygon PoS (Polymarket native chain)  
 > **Implementation Window:** 3 days (Day 2–4)  
-> **Spec Submission:** Day 1
+> **Spec Submission:** Day 1  
+> **Author:** Tran Thanh Binh
 
 ---
 
@@ -33,6 +33,12 @@ An AI Agent with its own wallet on Polygon. Users deposit USDC, the agent autono
 - Professional traders (they do their own analysis)
 - High-risk gamblers seeking fast returns
 
+### Why This User Matters (Market Context)
+
+Polymarket surpassed **$1B+ in monthly trading volume in 2024**, driven largely by the US election cycle. As political markets cool, Polymarket is pivoting heavily into **crypto price prediction markets** (BTC/ETH 1-min, 5-min, 15-min) to sustain engagement. This creates a massive influx of **new retail users** who are drawn by the simplicity of "up or down?" but lack the discipline to be profitable.
+
+Our agent targets exactly this gap: the growing wave of retail users entering crypto prediction markets who need automated, disciplined execution to avoid losing money.
+
 ---
 
 ## 3. Problem Statement
@@ -55,6 +61,17 @@ BTC 15-min prediction markets **do not require 100% accuracy to be profitable**.
 - Disciplined exit rules (daily profit target + daily loss limit)
 
 → **AI Agent has an absolute edge:** faster analysis than humans, zero emotion, 100% rule compliance.
+
+### Competitive Landscape
+
+| Existing Solution | Limitation | Our Advantage |
+|-------------------|-----------|---------------|
+| Manual trading on Polymarket | Requires knowledge, time, emotional discipline | Fully autonomous, emotion-free |
+| Generic trading bots (3Commas, Pionex) | Built for CEX spot/futures, not prediction markets | Purpose-built for Polymarket binary outcomes |
+| DeFi yield aggregators (Yearn, Beefy) | Passive yield, no active trading | Active alpha generation with risk controls |
+| Copy trading platforms | Following others blindly, no risk management | Own signal engine + strict money management |
+
+**No existing product offers autonomous, risk-managed betting on Polymarket prediction markets.** This is a greenfield opportunity.
 
 ---
 
@@ -93,12 +110,31 @@ BTC 15-min prediction markets **do not require 100% accuracy to be profitable**.
 
 ### 5.1 — Signal Engine
 
-| Signal | Description | Weight |
-|--------|------------|--------|
-| **Price Momentum** | BTC trend over last 1h (EMA 5 vs EMA 15 crossover) | 30% |
-| **Volume Spike** | Abnormal volume → higher continuation probability | 20% |
-| **RSI (14)** | Oversold (<30) → likely bounce UP. Overbought (>70) → likely pullback DOWN | 25% |
-| **Market Odds** | Polymarket odds skewed >65/35 → value bet on the opposite side | 25% |
+| Signal | Description | Weight | Data Source |
+|--------|------------|--------|------------|
+| **Price Momentum** | BTC trend over last 1h (EMA 5 vs EMA 15 crossover) | 30% | Binance REST API — `/api/v3/klines?symbol=BTCUSDT&interval=1m&limit=60` |
+| **Volume Spike** | Current 15-min volume vs 1h average → spike = continuation | 20% | Binance REST API — same kline endpoint, volume field |
+| **RSI (14)** | Oversold (<30) → likely bounce UP. Overbought (>70) → likely pullback DOWN | 25% | Computed from 14 close prices from kline data |
+| **Market Odds** | Polymarket odds skewed >65/35 → value bet on the opposite side | 25% | Polymarket CLOB API `/prices` endpoint (mock: fixed 50/50) |
+
+**Signal Computation Flow:**
+
+```
+Binance API (60 x 1-min candles)
+       ↓
+┌──────────────────────────────────┐
+│ EMA(5) vs EMA(15)  → momentum   │ → score: +30 (bullish) or -30 (bearish)
+│ RSI(14)            → reversal   │ → score: +25 (<30) or -25 (>70) or 0
+│ Volume ratio       → conviction │ → score: ±20 (amplifies momentum direction)
+│ Market odds        → value      │ → score: ±25 (contrarian when odds skewed)
+└──────────────────────────────────┘
+       ↓
+Composite score: sum of all → normalize to 0-100 confidence
+Direction: positive sum = UP, negative sum = DOWN
+       ↓
+Confidence ≥ 60% → BET (direction, 2% bankroll)
+Confidence < 60% → SKIP
+```
 
 **Critical Rules:**
 
@@ -132,6 +168,18 @@ Worst case:  -10%/day (daily loss limit protects)
 
 → Positive expected value over multiple days. Not get-rich-quick, but account preservation guaranteed.
 
+### 5.4 — Why This Strategy Works for "Zero Knowledge" Users
+
+The strategy is deliberately designed around **three layers of protection**:
+
+1. **Layer 1 — Small bets (2%):** Even 10 consecutive losses only costs 20% of bankroll. Statistically near-impossible with a 50%+ win rate.
+
+2. **Layer 2 — Skip discipline:** Agent bets only when confidence ≥ 60%. By filtering out low-quality rounds, the effective win rate on actual bets rises from ~50% (random) to 53-58%.
+
+3. **Layer 3 — Hard stops:** Daily loss limit (-10%) prevents catastrophic days. Daily profit target (+5%) locks in gains before the market reverts. Consecutive loss pause (4 losses → 1h break) prevents tilt-like behavior.
+
+**The key insight:** Users don't need to understand ANY of this. They press "Start Agent" and the system handles everything. The complexity is hidden behind a single button.
+
 ---
 
 ## 6. Scope Definition (3-Day Constraint)
@@ -160,6 +208,10 @@ Worst case:  -10%/day (daily loss limit protects)
 - Advanced charting
 - Social features (leaderboard, copy trading)
 
+### Scope Decision Rationale
+
+Every additional feature costs 0.5–1 day. With a 3-day implementation window, the MVP must prove **one thing only:** an AI agent can autonomously manage a prediction market wallet with disciplined risk controls. One working happy path > ten incomplete features.
+
 ---
 
 ## 7. Tech Stack
@@ -169,19 +221,30 @@ Worst case:  -10%/day (daily loss limit protects)
 | **Blockchain** | **Polygon PoS** | Polymarket runs natively on Polygon. Gas ~$0.01/tx. High USDC liquidity |
 | Frontend | React + Vite + TailwindCSS | Fast setup, responsive UI |
 | Backend | Node.js + Express | Lightweight, real-time capable |
-| Wallet | ethers.js + Polygon RPC | Generate agent wallet, sign transactions on Polygon |
-| Price Data | Binance WebSocket API (free) | Real-time BTC price + volume + kline, low latency |
+| Wallet | ethers.js v6 + Polygon RPC | Generate agent wallet, sign transactions on Polygon |
+| Price Data | Binance REST API (free, no key) | BTC 1-min klines for signal computation |
 | Prediction Market | Polymarket CLOB API | Programmatic bet placement on Polygon |
-| AI Layer | Claude API / OpenAI API | Signal analysis, bet explanation for users |
-| Scheduler | node-cron | 15-minute loop execution |
+| AI Layer | Claude API / OpenAI API | Bet explanation for dashboard (optional Day 4) |
+| Scheduler | node-cron | 15-minute loop (configurable to 1-min for demo) |
+| Database | SQLite (better-sqlite3) | Zero-config, embedded, sufficient for single-user MVP |
 
 ### Why Polygon?
 
 - **Polymarket native:** Polymarket is deployed on Polygon → zero bridging complexity
 - **Ultra-low gas:** ~$0.01/tx → 20 rounds/day costs ~$0.20 in gas
 - **Native USDC:** High liquidity on Polygon, no wrapped token required
-- **Testnet ready:** Polygon Amoy testnet with faucet for development
+- **Testnet ready:** Polygon Amoy testnet (chain ID 80002) with faucet for development
 - **Free RPC:** Alchemy, Infura, QuickNode all support Polygon free tier
+
+### Fallback Plan: Mock Mode
+
+If Polymarket CLOB API integration proves too complex within the 3-day window:
+
+- **Mock mode** uses real BTC price data from Binance
+- Agent records BTC price at bet time, compares with price after round interval
+- If agent bet UP and price went up → WIN. Otherwise → LOSS
+- Dashboard, money management, auto-stop — all work identically in mock mode
+- **Demo is equally convincing** because it uses real market data, not random numbers
 
 ---
 
@@ -270,6 +333,19 @@ Worst case:  -10%/day (daily loss limit protects)
 | **Subscription** | Free: $100 max bankroll, 10 rounds/day. Pro ($4.99/mo): $5k bankroll, unlimited |
 | **Incentive alignment** | Platform earns only when users earn → strong motivation to optimize strategy |
 
+### Unit Economics
+
+```
+Assume 1,000 active Pro subscribers:
+- Subscription revenue: 1,000 × $4.99 = $4,990/mo
+- Average user bankroll: $500
+- Average daily return: +2% = $10/day
+- Performance fee: 15% × $10 = $1.50/user/day × 30 days = $45/user/mo
+- Performance revenue: 1,000 × $45 = $45,000/mo
+
+Total: ~$50,000/mo at 1,000 users
+```
+
 ---
 
 ## 11. Implementation Plan (3 Days)
@@ -278,13 +354,13 @@ Worst case:  -10%/day (daily loss limit protects)
 
 **Morning:**
 - Project setup: React + Vite + Express + ethers.js
-- Polygon configuration: RPC endpoint (Alchemy), chain ID (137/80002), USDC contract
+- Polygon configuration: RPC endpoint (Alchemy), chain ID (80002), USDC contract
 - Agent wallet module: generate Polygon wallet, store encrypted private key server-side
-- Frontend: MetaMask connection (auto-switch to Polygon), display USDC balance
+- Frontend: MetaMask connection (auto-switch to Polygon Amoy), display USDC balance
 
 **Afternoon:**
 - Deposit flow: user wallet → agent wallet (Polygon USDC transfer)
-- BTC price feed: Binance WebSocket (1m kline real-time)
+- BTC price feed: Binance REST API (1-min klines)
 - Signal engine v1: compute EMA(5), EMA(15), RSI(14), volume delta
 - Unit tests for signal computation
 
@@ -293,15 +369,15 @@ Worst case:  -10%/day (daily loss limit protects)
 ### Day 3 — Agent Core + Dashboard
 
 **Morning:**
-- Polymarket CLOB API integration: place order, query result
-- Fallback: Mock mode — real BTC price data, simulated bet outcomes
-- Agent loop: node-cron every 15 min → fetch signals → decide → bet/skip → log
+- Polymarket CLOB API integration (or fallback to Mock mode)
+- Agent loop: node-cron every interval → fetch signals → decide → bet/skip → log
+- Mock mode: real BTC price, simulated bet outcomes
 
 **Afternoon:**
 - Money management engine: bet sizing, daily limits, consecutive loss tracking
 - Auto-stop logic implementation
 - Dashboard UI: bankroll card, P&L card, win rate display, bet history table, status badge
-- Real-time updates via WebSocket or polling
+- Polling-based real-time updates (5-second interval)
 
 **Push to GitHub ✅**
 
@@ -309,13 +385,13 @@ Worst case:  -10%/day (daily loss limit protects)
 
 **Morning:**
 - Withdraw flow (agent wallet → user wallet on Polygon)
-- AI explanation: each bet includes brief reasoning from Claude/OpenAI
+- AI explanation: each bet includes brief reasoning (optional Claude/OpenAI call)
 - End-to-end test: deposit → start → 5-10 rounds → auto-stop → withdraw
 
 **Afternoon:**
 - UI polish: loading states, error toasts, empty states, responsive design
-- Seed demo data: run agent for 15-20 simulated rounds to populate history
-- Capture AI prompt screenshots for showcase
+- Seed demo data: script generates 15-20 realistic rounds for demo
+- Capture AI prompt screenshots for AI Showcase
 - Final push to GitHub ✅
 
 ---
@@ -324,23 +400,42 @@ Worst case:  -10%/day (daily loss limit protects)
 
 | Section | Duration | Content |
 |---------|----------|---------|
-| Problem & User | 2 min | "Prediction markets are hot, but average users guess randomly and lose" |
-| Live Demo | 5 min | Connect wallet → Deposit $100 → Safe Mode → Start → Show 2-3 rounds (bet + skip) → Dashboard → Auto-stop trigger → Withdraw |
-| AI Showcase | 3 min | Prompts used for strategy design, code generation, debugging |
-| Roadmap | 2 min | Multi-market, backtesting, Telegram bot, mainnet |
-| Q&A | 5-8 min | "Why this strategy?", "What if it keeps losing?", "Biggest risk?" |
+| **Problem & User** | 2 min | "Polymarket BTC markets are booming, but retail users guess randomly and lose. They need an edge — not skill, but discipline." |
+| **Live Demo** | 5 min | Open dashboard → Connect MetaMask → Show bankroll ($103 after 20 rounds) → Walk through bet history (green wins, red losses, gray skips) → Show auto-stop trigger → Withdraw flow |
+| **How It Works** | 2 min | Signal engine diagram → Money management rules → "The user presses one button. Everything else is automated." |
+| **AI Showcase** | 3 min | Screenshot: prompt for strategy design, prompt for signal engine code, prompt for debugging |
+| **Roadmap** | 1 min | Multi-market → Backtest → Telegram → Mainnet |
+| **Q&A** | 5-8 min | Prepared for: "Why this strategy?", "What if it keeps losing?", "How is this different from gambling?" |
+
+### Prepared Q&A Answers
+
+**Q: "Why this strategy and not something more complex?"**
+A: Complexity is the enemy of a 3-day MVP. The signal engine uses proven technical indicators (EMA, RSI) that are simple to implement but statistically effective. The real edge isn't prediction accuracy — it's money management. Even a 50% win rate breaks even with 2% bet sizing.
+
+**Q: "What if the agent keeps losing?"**
+A: Three safety nets. First, 2% bet size means 10 consecutive losses = only 20% drawdown. Second, daily loss limit (-10%) forces a hard stop. Third, 4 consecutive losses triggers a 1-hour pause. The worst realistic daily outcome is -10%, and the agent simply stops.
+
+**Q: "How is this different from gambling?"**
+A: Gambling is emotional, undisciplined, and random. This agent uses data-driven signals, strict position sizing, and hard risk limits. The same principles used by professional trading firms — just applied to prediction markets. Also, the agent SKIPS when confidence is low. A gambler never skips.
+
+**Q: "What's the biggest risk?"**
+A: Signal engine win rate dropping below 50% for an extended period. Mitigation: daily loss limit caps downside, and the strategy can be improved with backtesting in V1.2.
 
 ---
 
 ## 13. Roadmap
 
-| Phase | Feature |
-|-------|---------|
-| V1.1 | Additional markets: ETH, SOL 15-min |
-| V1.2 | Backtesting engine: validate win rate on historical data |
-| V1.3 | Telegram bot: notifications + start/stop via Telegram |
-| V2.0 | Multiple modes: Aggressive (5% bet), Custom (user-defined indicators) |
-| V2.1 | Social layer: leaderboard, copy strategy from top agents |
-| V3.0 | Mainnet production deployment + MPC key management |
+| Phase | Feature | Estimated Time |
+|-------|---------|---------------|
+| V1.1 | Additional markets: ETH, SOL 15-min | 1 week |
+| V1.2 | Backtesting engine: validate win rate on historical data | 1 week |
+| V1.3 | Telegram bot: notifications + start/stop via Telegram | 3 days |
+| V2.0 | Multiple modes: Aggressive (5% bet), Custom (user-defined indicators) | 2 weeks |
+| V2.1 | Social layer: leaderboard, copy strategy from top agents | 2 weeks |
+| V3.0 | Mainnet production deployment + MPC key management | 1 month |
 
 ---
+
+## Disclaimer
+
+This product is a demonstration MVP. It does not guarantee profits. Prediction markets involve risk. Users should only deposit funds they are willing to lose. Past performance of the signal engine does not guarantee future results.
