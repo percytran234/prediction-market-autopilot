@@ -26,6 +26,6 @@ app.use(agentRoutes);
 app.use(dashboardRoutes);
 app.use(signalRoutes);
 
-app.listen(config.port, () => {
+app.listen(config.port, '0.0.0.0', () => {
   console.log(`Server running on port ${config.port}`);
 });
