@@ -5,6 +5,7 @@ import { getDb } from './db/database.js';
 import walletRoutes from './routes/walletRoutes.js';
 import agentRoutes from './routes/agentRoutes.js';
 import dashboardRoutes from './routes/dashboardRoutes.js';
+import signalRoutes from './routes/signalRoutes.js';
 
 const app = express();
 
@@ -23,6 +24,7 @@ app.get('/api/health', (req, res) => {
 app.use(walletRoutes);
 app.use(agentRoutes);
 app.use(dashboardRoutes);
+app.use(signalRoutes);
 
 app.listen(config.port, () => {
   console.log(`Server running on port ${config.port}`);

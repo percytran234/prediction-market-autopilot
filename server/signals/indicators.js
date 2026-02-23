@@ -51,13 +51,13 @@ export function calculateRSI(prices, period = 14) {
 /**
  * Calculate volume ratio (current vs average)
  */
-export function calculateVolumeRatio(volumes, lookback = 60) {
-  if (volumes.length < 2) return 1;
+export function calculateVolumeRatio(volumes, period = 15) {
+  if (volumes.length < period + 1) return 1;
 
-  const recent = volumes.slice(-15);
+  const recent = volumes.slice(-period);
   const recentAvg = recent.reduce((a, b) => a + b, 0) / recent.length;
 
-  const historical = volumes.slice(0, -15);
+  const historical = volumes.slice(0, -period);
   if (historical.length === 0) return 1;
   const historicalAvg = historical.reduce((a, b) => a + b, 0) / historical.length;
 
