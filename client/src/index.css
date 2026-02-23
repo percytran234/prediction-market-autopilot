@@ -1,30 +1,75 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* ─── Base ─── */
 body {
   margin: 0;
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background: #0a0a0f;
 }
 
-::-webkit-scrollbar {
-  width: 6px;
-}
-::-webkit-scrollbar-track {
-  background: #0a0b0f;
-}
-::-webkit-scrollbar-thumb {
-  background: #1e2028;
-  border-radius: 3px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: #2a2d3a;
+/* ─── Scrollbar ─── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #0a0a0f; }
+::-webkit-scrollbar-thumb { background: #1e1e2e; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #2a2d3a; }
+
+.scrollbar-thin::-webkit-scrollbar { width: 4px; }
+.scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
+.scrollbar-thin::-webkit-scrollbar-thumb { background: #2a2d3a; border-radius: 2px; }
+
+/* ─── Grid Background Pattern ─── */
+.grid-bg {
+  background-image:
+    linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+  background-size: 40px 40px;
 }
 
+/* ─── Neon Glow Effects ─── */
+.neon-green {
+  color: #00ff88;
+  text-shadow: 0 0 7px rgba(0,255,136,0.6), 0 0 20px rgba(0,255,136,0.3);
+}
+.neon-red {
+  color: #ff3333;
+  text-shadow: 0 0 7px rgba(255,51,51,0.6), 0 0 20px rgba(255,51,51,0.3);
+}
+.neon-orange {
+  color: #ff6600;
+  text-shadow: 0 0 7px rgba(255,102,0,0.6), 0 0 20px rgba(255,102,0,0.3);
+}
+.neon-blue {
+  color: #3b82f6;
+  text-shadow: 0 0 7px rgba(59,130,246,0.6), 0 0 20px rgba(59,130,246,0.3);
+}
+
+/* ─── Glow borders for cards ─── */
+.glow-card {
+  position: relative;
+  border: 1px solid #1e1e2e;
+}
+.glow-card::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  background: linear-gradient(135deg, rgba(255,102,0,0.1) 0%, rgba(255,51,51,0.05) 50%, transparent 100%);
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+.glow-card:hover::after {
+  opacity: 1;
+}
+
+/* ─── Animations ─── */
 @keyframes pulse-glow {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.5; }
@@ -33,7 +78,30 @@ body {
   animation: pulse-glow 2s ease-in-out infinite;
 }
 
-/* Loading spinner */
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+.animate-blink {
+  animation: blink 1s ease-in-out infinite;
+}
+
+@keyframes neon-pulse {
+  0%, 100% { text-shadow: 0 0 7px rgba(0,255,136,0.6), 0 0 20px rgba(0,255,136,0.3); }
+  50% { text-shadow: 0 0 14px rgba(0,255,136,0.8), 0 0 40px rgba(0,255,136,0.5), 0 0 60px rgba(0,255,136,0.2); }
+}
+.animate-neon-pulse {
+  animation: neon-pulse 2s ease-in-out infinite;
+}
+
+@keyframes neon-pulse-red {
+  0%, 100% { text-shadow: 0 0 7px rgba(255,51,51,0.6), 0 0 20px rgba(255,51,51,0.3); }
+  50% { text-shadow: 0 0 14px rgba(255,51,51,0.8), 0 0 40px rgba(255,51,51,0.5), 0 0 60px rgba(255,51,51,0.2); }
+}
+.animate-neon-pulse-red {
+  animation: neon-pulse-red 2s ease-in-out infinite;
+}
+
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
@@ -41,71 +109,143 @@ body {
   width: 28px;
   height: 28px;
   border: 3px solid #2a2d3a;
-  border-top-color: #3b82f6;
+  border-top-color: #ff6600;
   border-radius: 50%;
   animation: spin 0.7s linear infinite;
 }
 
-/* Smooth value transitions */
-.stat-value {
-  transition: color 0.4s ease;
-}
-
-/* Stats cards gradient glow backdrop */
-.stats-glow {
-  position: relative;
-}
-.stats-glow::before {
-  content: '';
-  position: absolute;
-  inset: -1px;
-  border-radius: 0.75rem;
-  background: linear-gradient(135deg, rgba(34,197,94,0.08) 0%, rgba(59,130,246,0.06) 50%, rgba(139,92,246,0.08) 100%);
-  z-index: 0;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.4s ease;
-}
-.stats-glow:hover::before {
-  opacity: 1;
-}
-
-/* Pulsing status dot */
 @keyframes status-pulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(34,197,94,0.5); }
-  50% { box-shadow: 0 0 0 5px rgba(34,197,94,0); }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(0,255,136,0.5); }
+  50% { box-shadow: 0 0 0 6px rgba(0,255,136,0); }
 }
 .status-dot-active {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #22c55e;
+  background: #00ff88;
   animation: status-pulse 2s ease-in-out infinite;
 }
 
-/* Bet row fade-in */
 @keyframes bet-fade-in {
-  from {
-    opacity: 0;
-    transform: translateY(-6px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 .bet-row-enter {
   animation: bet-fade-in 0.35s ease-out both;
 }
 
-/* Thin scrollbar for nested scrollable areas */
-.scrollbar-thin::-webkit-scrollbar {
-  width: 4px;
+@keyframes slide-in {
+  from { opacity: 0; transform: translateX(-10px); }
+  to { opacity: 1; transform: translateX(0); }
 }
-.scrollbar-thin::-webkit-scrollbar-track {
-  background: transparent;
+.animate-slide-in {
+  animation: slide-in 0.3s ease-out both;
 }
-.scrollbar-thin::-webkit-scrollbar-thumb {
-  background: #2a2d3a;
+
+@keyframes gauge-fill {
+  from { stroke-dashoffset: 283; }
+}
+.animate-gauge {
+  animation: gauge-fill 1s ease-out both;
+}
+
+/* ─── Smooth value transitions ─── */
+.stat-value {
+  transition: color 0.4s ease;
+}
+
+/* ─── Sidebar ─── */
+.sidebar-link {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  color: #6b7280;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  position: relative;
+}
+.sidebar-link:hover {
+  color: #e2e8f0;
+  background: rgba(255,102,0,0.05);
+}
+.sidebar-link.active {
+  color: #ff6600;
+  background: rgba(255,102,0,0.1);
+}
+.sidebar-link.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 60%;
+  background: #ff6600;
+  border-radius: 0 3px 3px 0;
+  box-shadow: 0 0 8px rgba(255,102,0,0.5);
+}
+
+/* ─── Terminal card style ─── */
+.terminal-card {
+  background: #111118;
+  border: 1px solid #1e1e2e;
+  border-radius: 0.75rem;
+}
+
+/* ─── Heatmap cell ─── */
+.heatmap-cell {
   border-radius: 2px;
+  transition: all 0.2s ease;
+}
+.heatmap-cell:hover {
+  transform: scale(1.2);
+  z-index: 10;
+}
+
+/* ─── Achievement badge ─── */
+.badge-glow {
+  box-shadow: 0 0 12px rgba(255,102,0,0.3);
+}
+.badge-locked {
+  filter: grayscale(1) brightness(0.4);
+}
+
+/* ─── Gradient border for avatar ─── */
+.avatar-gradient {
+  background: linear-gradient(135deg, #ff6600, #ff3333, #ff6600);
+  padding: 3px;
+  border-radius: 50%;
+}
+
+/* ─── Risk meter gauge ─── */
+.gauge-track {
+  fill: none;
+  stroke: #1e1e2e;
+  stroke-width: 8;
+}
+.gauge-fill {
+  fill: none;
+  stroke-width: 8;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 1s ease, stroke 0.5s ease;
+}
+
+/* ─── Table styling ─── */
+.trade-table th {
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #6b7280;
+  padding: 0.625rem 0.75rem;
+  white-space: nowrap;
+}
+.trade-table td {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  white-space: nowrap;
 }
