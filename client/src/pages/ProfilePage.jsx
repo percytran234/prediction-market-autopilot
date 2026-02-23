@@ -1,25 +1,21 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
 
 function fmt(n, d = 2) { return Number(n || 0).toFixed(d); }
 
+const USERNAME_KEY = 'prediction_agent_username';
+const JOURNAL_KEY  = 'prediction_agent_journal';
+
 // ─── Rank System ───
 const RANKS = [
-  { name: 'Bronze', min: -Infinity, max: 0, color: '#cd7f32', icon: '\u2726', gradient: 'from-[#cd7f32] to-[#8b4513]' },
-  { name: 'Silver', min: 0, max: 50, color: '#c0c0c0', icon: '\u2727', gradient: 'from-[#c0c0c0] to-[#808080]' },
-  { name: 'Gold', min: 50, max: 200, color: '#ffd700', icon: '\u2605', gradient: 'from-[#ffd700] to-[#ff8c00]' },
-  { name: 'Platinum', min: 200, max: 500, color: '#e5e4e2', icon: '\u2666', gradient: 'from-[#e5e4e2] to-[#a0a0a0]' },
-  { name: 'Diamond', min: 500, max: Infinity, color: '#b9f2ff', icon: '\u2756', gradient: 'from-[#b9f2ff] to-[#00bfff]' },
+  { name: 'Bronze',   min: -Infinity, max: 0,   color: '#cd7f32', icon: '✦', gradient: 'from-[#cd7f32] to-[#8b4513]' },
+  { name: 'Silver',   min: 0,         max: 50,  color: '#c0c0c0', icon: '✧', gradient: 'from-[#c0c0c0] to-[#808080]' },
+  { name: 'Gold',     min: 50,        max: 200, color: '#ffd700', icon: '★', gradient: 'from-[#ffd700] to-[#ff8c00]' },
+  { name: 'Platinum', min: 200,       max: 500, color: '#e5e4e2', icon: '◆', gradient: 'from-[#e5e4e2] to-[#a0a0a0]' },
+  { name: 'Diamond',  min: 500,       max: Infinity, color: '#b9f2ff', icon: '❖', gradient: 'from-[#b9f2ff] to-[#00bfff]' },
 ];
 
 function getRank(pnl) {
-  for (let i = RANKS.length - 1; i >= 0; i--) {
-    if (pnl >= RANKS[i].min && (i === RANKS.length - 1 || pnl < RANKS[i + 1].min)) {
-      // Check from highest to lowest
-    }
-  }
-  for (const r of [...RANKS].reverse()) {
-    if (pnl >= r.min) return r;
-  }
+  for (const r of [...RANKS].reverse()) { if (pnl >= r.min) return r; }
   return RANKS[0];
 }
 
@@ -35,21 +31,218 @@ function getNextRank(pnl) {
 
 // ─── Achievement Definitions ───
 const ACHIEVEMENTS = [
-  { id: 'first_win', name: 'First Blood', desc: 'Win your first trade', icon: '\u2694', check: (s) => s.wins >= 1 },
-  { id: 'ten_trades', name: 'Getting Started', desc: 'Complete 10 trades', icon: '\u26A1', check: (s) => s.totalTrades >= 10 },
-  { id: 'fifty_trades', name: 'Seasoned Trader', desc: 'Complete 50 trades', icon: '\u2693', check: (s) => s.totalTrades >= 50 },
-  { id: 'hundred_bets', name: 'Century Club', desc: 'Complete 100 trades', icon: '\u265B', check: (s) => s.totalTrades >= 100 },
-  { id: 'win_streak_3', name: 'Hot Streak', desc: '3 wins in a row', icon: '\u2733', check: (s) => s.bestWinStreak >= 3 },
-  { id: 'win_streak_5', name: 'On Fire', desc: '5 wins in a row', icon: '\u2734', check: (s) => s.bestWinStreak >= 5 },
-  { id: 'win_streak_10', name: '10-Win Streak', desc: '10 consecutive wins', icon: '\u2747', check: (s) => s.bestWinStreak >= 10 },
-  { id: 'profit_10', name: 'In the Green', desc: 'Earn $10+ total profit', icon: '\u2740', check: (s) => s.totalPnl >= 10 },
-  { id: 'profit_50', name: 'Profit Master', desc: 'Earn $50+ total profit', icon: '\u2741', check: (s) => s.totalPnl >= 50 },
-  { id: 'profit_100', name: 'Big Baller', desc: 'Earn $100+ total profit', icon: '\u273F', check: (s) => s.totalPnl >= 100 },
-  { id: 'win_rate_60', name: 'Consistent', desc: 'Maintain 60%+ win rate (10+ trades)', icon: '\u2742', check: (s) => s.winRate >= 60 && s.totalTrades >= 10 },
-  { id: 'survivor', name: 'Survivor', desc: 'Recover from a 3-loss streak', icon: '\u2743', check: (s) => s.recoveredFromStreak },
+  { id: 'first_win',    name: 'First Blood',      desc: 'Win your first trade',                     icon: '⚔', check: s => s.wins >= 1 },
+  { id: 'ten_trades',   name: 'Getting Started',  desc: 'Complete 10 trades',                       icon: '⚡', check: s => s.totalTrades >= 10 },
+  { id: 'fifty_trades', name: 'Seasoned Trader',  desc: 'Complete 50 trades',                       icon: '⚓', check: s => s.totalTrades >= 50 },
+  { id: 'hundred_bets', name: 'Century Club',     desc: 'Complete 100 trades',                      icon: '♛', check: s => s.totalTrades >= 100 },
+  { id: 'win_streak_3', name: 'Hot Streak',       desc: '3 wins in a row',                          icon: '✳', check: s => s.bestWinStreak >= 3 },
+  { id: 'win_streak_5', name: 'On Fire',          desc: '5 wins in a row',                          icon: '✴', check: s => s.bestWinStreak >= 5 },
+  { id: 'win_streak_10',name: '10-Win Streak',    desc: '10 consecutive wins',                      icon: '✧', check: s => s.bestWinStreak >= 10 },
+  { id: 'profit_10',    name: 'In the Green',     desc: 'Earn $10+ total profit',                   icon: '✿', check: s => s.totalPnl >= 10 },
+  { id: 'profit_50',    name: 'Profit Master',    desc: 'Earn $50+ total profit',                   icon: '❁', check: s => s.totalPnl >= 50 },
+  { id: 'profit_100',   name: 'Big Baller',       desc: 'Earn $100+ total profit',                  icon: '✯', check: s => s.totalPnl >= 100 },
+  { id: 'win_rate_60',  name: 'Consistent',       desc: 'Maintain 60%+ win rate (10+ trades)',      icon: '✪', check: s => s.winRate >= 60 && s.totalTrades >= 10 },
+  { id: 'survivor',     name: 'Survivor',         desc: 'Recover from a 3-loss streak',             icon: '✣', check: s => s.recoveredFromStreak },
 ];
 
+// ─── Share Card Modal ───
+function ShareModal({ stats, rank, username, account, onClose }) {
+  const truncAddr = account ? `${account.slice(0, 6)}...${account.slice(-4)}` : '0x????...????';
+  const pnlSign   = stats.totalPnl >= 0 ? '+' : '';
+  const pnlColor  = stats.totalPnl >= 0 ? '#00ff88' : '#ff3333';
+
+  function copyText() {
+    const text =
+      `🏆 ${username} — ${rank.name} Trader\n` +
+      `📊 ${stats.totalTrades} trades | ${fmt(stats.winRate, 1)}% win rate\n` +
+      `💰 P&L: ${pnlSign}$${fmt(stats.totalPnl)}\n` +
+      `🔥 Best streak: ${stats.bestWinStreak}W\n` +
+      `Prediction Market Auto-Pilot — Polygon Amoy Testnet`;
+    navigator.clipboard.writeText(text).catch(() => {});
+    onClose();
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center animate-modal-backdrop"
+      style={{ background: 'rgba(0,0,0,0.75)' }}
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="animate-modal-content w-full max-w-sm mx-4" onClick={e => e.stopPropagation()}>
+        {/* Shareable card preview */}
+        <div className="rounded-xl border border-dark-border overflow-hidden"
+          style={{ background: 'linear-gradient(135deg,#0a0a0f 0%,#111118 60%,#1a0a00 100%)' }}>
+          {/* Header stripe */}
+          <div className="h-1 w-full" style={{ background: 'linear-gradient(90deg,#ff6600,#ff3333,#ff6600)' }} />
+
+          <div className="p-6 space-y-5">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-full border-2 border-accent-orange/50 flex items-center justify-center text-2xl"
+                style={{ color: rank.color }}>
+                {rank.icon}
+              </div>
+              <div>
+                <p className="text-base font-bold text-dark-text">{username}</p>
+                <p className="text-[10px] font-mono text-dark-muted">{truncAddr}</p>
+              </div>
+              <div className="ml-auto text-right">
+                <p className="text-xs font-bold font-mono" style={{ color: rank.color }}>{rank.name}</p>
+                <p className="text-[10px] text-dark-muted">Rank</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="rounded-lg p-3 text-center" style={{ background:'rgba(255,255,255,0.03)', border:'1px solid #1e1e2e' }}>
+                <p className="text-[9px] text-dark-muted uppercase tracking-widest">Trades</p>
+                <p className="text-xl font-bold font-mono text-dark-text">{stats.totalTrades}</p>
+              </div>
+              <div className="rounded-lg p-3 text-center" style={{ background:'rgba(255,255,255,0.03)', border:'1px solid #1e1e2e' }}>
+                <p className="text-[9px] text-dark-muted uppercase tracking-widest">Win Rate</p>
+                <p className="text-xl font-bold font-mono" style={{ color: stats.winRate >= 50 ? '#00ff88' : '#ff3333' }}>
+                  {fmt(stats.winRate, 1)}%
+                </p>
+              </div>
+              <div className="rounded-lg p-3 text-center" style={{ background:'rgba(255,255,255,0.03)', border:'1px solid #1e1e2e' }}>
+                <p className="text-[9px] text-dark-muted uppercase tracking-widest">Total P&L</p>
+                <p className="text-xl font-bold font-mono" style={{ color: pnlColor }}>
+                  {pnlSign}${fmt(stats.totalPnl)}
+                </p>
+              </div>
+              <div className="rounded-lg p-3 text-center" style={{ background:'rgba(255,255,255,0.03)', border:'1px solid #1e1e2e' }}>
+                <p className="text-[9px] text-dark-muted uppercase tracking-widest">Best Streak</p>
+                <p className="text-xl font-bold font-mono" style={{ color:'#ff6600' }}>{stats.bestWinStreak}W</p>
+              </div>
+            </div>
+
+            <p className="text-center text-[9px] font-mono text-dark-muted/50">
+              Prediction Market Auto-Pilot · Polygon Amoy Testnet
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-3 flex gap-2">
+          <button onClick={copyText}
+            className="flex-1 py-2 bg-accent-orange text-dark-bg text-xs font-bold rounded-lg hover:brightness-110 transition font-mono">
+            Copy to Clipboard
+          </button>
+          <button onClick={onClose}
+            className="px-4 py-2 text-xs text-dark-muted border border-dark-border rounded-lg hover:bg-dark-hover transition font-mono">
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Trading Journal ───
+function TradingJournal() {
+  const todayKey = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+  const [journal, setJournal] = useState(() => {
+    try { return JSON.parse(localStorage.getItem(JOURNAL_KEY) || '{}'); } catch { return {}; }
+  });
+  const [selectedDate, setSelectedDate] = useState(todayKey);
+  const [editText, setEditText] = useState('');
+  const [saved, setSaved] = useState(false);
+  const saveTimer = useRef(null);
+
+  // Load text for selected date
+  useEffect(() => {
+    setEditText(journal[selectedDate] || '');
+  }, [selectedDate, journal]);
+
+  function handleChange(e) {
+    const val = e.target.value;
+    setEditText(val);
+    setSaved(false);
+    // Auto-save after 800ms debounce
+    clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => {
+      setJournal(prev => {
+        const next = { ...prev, [selectedDate]: val };
+        try { localStorage.setItem(JOURNAL_KEY, JSON.stringify(next)); } catch {}
+        return next;
+      });
+      setSaved(true);
+    }, 800);
+  }
+
+  // Dates with entries
+  const datesWithEntries = Object.keys(journal).filter(k => journal[k]?.trim()).sort().reverse();
+
+  return (
+    <div className="terminal-card p-4 space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="text-xs font-semibold text-dark-muted uppercase tracking-wider">Trading Journal</h3>
+        <span className={`text-[10px] font-mono transition-opacity duration-300 ${saved ? 'text-accent-green opacity-100' : 'opacity-0'}`}>
+          Saved ✓
+        </span>
+      </div>
+
+      <div className="flex flex-wrap gap-2 items-center">
+        <label className="text-[11px] text-dark-muted font-mono">Date:</label>
+        <input type="date" value={selectedDate}
+          onChange={e => setSelectedDate(e.target.value)}
+          className="bg-dark-bg border border-dark-border rounded px-2 py-1 text-xs font-mono text-dark-text focus:outline-none focus:border-accent-orange/50" />
+        {datesWithEntries.length > 0 && (
+          <div className="flex gap-1 flex-wrap">
+            {datesWithEntries.slice(0, 5).map(d => (
+              <button key={d} onClick={() => setSelectedDate(d)}
+                className={`text-[9px] font-mono px-2 py-0.5 rounded border transition ${
+                  d === selectedDate
+                    ? 'border-accent-orange/40 bg-accent-orange/10 text-accent-orange'
+                    : 'border-dark-border text-dark-muted hover:border-dark-muted'
+                }`}>
+                {d.slice(5)} {/* MM-DD */}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <textarea
+        value={editText}
+        onChange={handleChange}
+        placeholder={`Notes for ${selectedDate}...\n\nWhat did the market do today? How did the agent perform? Any observations about strategy or conditions?`}
+        rows={7}
+        className="w-full bg-dark-bg border border-dark-border rounded-lg px-3 py-2.5 text-xs font-mono text-dark-text placeholder-dark-muted/40 focus:outline-none focus:border-accent-orange/40 resize-none scrollbar-thin"
+      />
+
+      <div className="flex justify-between items-center text-[10px] text-dark-muted font-mono">
+        <span>{datesWithEntries.length} journal {datesWithEntries.length === 1 ? 'entry' : 'entries'}</span>
+        <span>{editText.length} chars</span>
+      </div>
+    </div>
+  );
+}
+
 export default function ProfilePage({ account, dashboard, bets }) {
+  const [username, setUsername] = useState(() => {
+    try { return localStorage.getItem(USERNAME_KEY) || 'Prediction Trader'; } catch { return 'Prediction Trader'; }
+  });
+  const [editingName, setEditingName] = useState(false);
+  const [nameInput, setNameInput] = useState('');
+  const [showShare, setShowShare] = useState(false);
+  const nameInputRef = useRef(null);
+
+  function startEditName() {
+    setNameInput(username);
+    setEditingName(true);
+    setTimeout(() => nameInputRef.current?.focus(), 50);
+  }
+
+  function saveName() {
+    const trimmed = nameInput.trim();
+    if (trimmed) {
+      setUsername(trimmed);
+      try { localStorage.setItem(USERNAME_KEY, trimmed); } catch {}
+    }
+    setEditingName(false);
+  }
+
+  function handleNameKey(e) {
+    if (e.key === 'Enter') saveName();
+    if (e.key === 'Escape') setEditingName(false);
+  }
+
   const stats = useMemo(() => {
     const resolved = (bets || []).filter(b => b.result === 'WIN' || b.result === 'LOSS');
     const wins = resolved.filter(b => b.result === 'WIN').length;
@@ -57,24 +250,17 @@ export default function ProfilePage({ account, dashboard, bets }) {
     const winRate = resolved.length > 0 ? (wins / resolved.length) * 100 : 0;
     const totalTrades = resolved.length;
 
-    // Best win streak
     let bestWinStreak = 0, tempWin = 0;
-    const chronological = [...resolved].reverse();
-    for (const b of chronological) {
+    const chrono = [...resolved].reverse();
+    for (const b of chrono) {
       if (b.result === 'WIN') { tempWin++; if (tempWin > bestWinStreak) bestWinStreak = tempWin; }
       else { tempWin = 0; }
     }
 
-    // Check if recovered from 3-loss streak
-    let recoveredFromStreak = false;
-    let consLosses = 0;
-    let hadThreeLossStreak = false;
-    for (const b of chronological) {
-      if (b.result === 'LOSS') { consLosses++; if (consLosses >= 3) hadThreeLossStreak = true; }
-      else {
-        if (hadThreeLossStreak) recoveredFromStreak = true;
-        consLosses = 0;
-      }
+    let recoveredFromStreak = false, consLosses = 0, hadThree = false;
+    for (const b of chrono) {
+      if (b.result === 'LOSS') { consLosses++; if (consLosses >= 3) hadThree = true; }
+      else { if (hadThree) recoveredFromStreak = true; consLosses = 0; }
     }
 
     return { wins, totalPnl, winRate, totalTrades, bestWinStreak, recoveredFromStreak };
@@ -88,13 +274,10 @@ export default function ProfilePage({ account, dashboard, bets }) {
 
   const unlockedCount = ACHIEVEMENTS.filter(a => a.check(stats)).length;
 
-  // Join date: find earliest bet
   const allBets = bets || [];
-  const chronoBets = [...allBets].reverse();
-  const joinDate = chronoBets.length > 0 ? new Date(chronoBets[0].round_time) : new Date();
-  const joinStr = joinDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-
-  const truncatedAddr = account ? `${account.slice(0, 6)}...${account.slice(-4)}` : '0x0000...0000';
+  const joinDate = allBets.length > 0 ? new Date([...allBets].reverse()[0].round_time) : new Date();
+  const joinStr  = joinDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+  const truncAddr = account ? `${account.slice(0, 6)}...${account.slice(-4)}` : '0x0000...0000';
 
   return (
     <div className="space-y-6 animate-slide-in">
@@ -105,15 +288,39 @@ export default function ProfilePage({ account, dashboard, bets }) {
         <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6">
           {/* Avatar */}
           <div className="avatar-gradient shrink-0">
-            <div className="w-24 h-24 rounded-full bg-dark-bg flex items-center justify-center text-3xl" style={{ color: rank.color }}>
+            <div className="w-24 h-24 rounded-full bg-dark-bg flex items-center justify-center text-3xl"
+              style={{ color: rank.color }}>
               {rank.icon}
             </div>
           </div>
 
           {/* Info */}
           <div className="flex-1 text-center sm:text-left">
-            <h3 className="text-xl font-bold text-dark-text">Prediction Trader</h3>
-            <p className="text-xs font-mono text-dark-muted mt-1">{truncatedAddr}</p>
+            {/* Editable username */}
+            {editingName ? (
+              <div className="flex items-center gap-2">
+                <input
+                  ref={nameInputRef}
+                  value={nameInput}
+                  onChange={e => setNameInput(e.target.value)}
+                  onKeyDown={handleNameKey}
+                  onBlur={saveName}
+                  maxLength={30}
+                  className="bg-dark-bg border border-accent-orange/50 rounded px-2 py-1 text-lg font-bold text-dark-text focus:outline-none focus:border-accent-orange font-mono"
+                />
+                <button onClick={saveName}
+                  className="text-[11px] px-2 py-1 bg-accent-orange/20 text-accent-orange border border-accent-orange/30 rounded hover:bg-accent-orange/30 transition font-mono">
+                  Save
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 group cursor-pointer" onClick={startEditName}>
+                <h3 className="text-xl font-bold text-dark-text group-hover:text-accent-orange transition">{username}</h3>
+                <span className="text-[10px] text-dark-muted/50 group-hover:text-dark-muted transition font-mono">[edit]</span>
+              </div>
+            )}
+
+            <p className="text-xs font-mono text-dark-muted mt-1">{truncAddr}</p>
             <p className="text-[11px] text-dark-muted mt-1">Joined {joinStr}</p>
 
             {/* Rank */}
@@ -123,21 +330,20 @@ export default function ProfilePage({ account, dashboard, bets }) {
                 <p className="font-bold font-mono text-sm" style={{ color: rank.color }}>{rank.name}</p>
                 {nextRank && (
                   <p className="text-[10px] text-dark-muted font-mono">
-                    ${fmt(Math.max(0, nextRank.min - stats.totalPnl))} P&L to {nextRank.name}
+                    ${fmt(Math.max(0, nextRank.min - stats.totalPnl))} P&amp;L to {nextRank.name}
                   </p>
                 )}
               </div>
             </div>
 
-            {/* Progress bar to next rank */}
+            {/* Progress bar */}
             {nextRank && (
               <div className="mt-2 w-full max-w-xs">
                 <div className="w-full h-2 bg-dark-border rounded-full overflow-hidden">
-                  <div
-                    className="h-full rounded-full transition-all duration-500"
+                  <div className="h-full rounded-full transition-all duration-500"
                     style={{
                       width: `${progressToNext}%`,
-                      background: `linear-gradient(90deg, ${rank.color}, ${nextRank.color})`,
+                      background: `linear-gradient(90deg,${rank.color},${nextRank.color})`,
                       boxShadow: `0 0 8px ${rank.color}`,
                     }}
                   />
@@ -148,6 +354,12 @@ export default function ProfilePage({ account, dashboard, bets }) {
                 </div>
               </div>
             )}
+
+            {/* Share button */}
+            <button onClick={() => setShowShare(true)}
+              className="mt-4 inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono font-bold text-accent-orange border border-accent-orange/30 bg-accent-orange/5 rounded-lg hover:bg-accent-orange/15 transition">
+              ↗ Share Stats
+            </button>
           </div>
 
           {/* Quick stats */}
@@ -163,7 +375,7 @@ export default function ProfilePage({ account, dashboard, bets }) {
               </p>
             </div>
             <div className="terminal-card p-3 min-w-[90px]">
-              <p className="text-[10px] text-dark-muted uppercase">Total P&L</p>
+              <p className="text-[10px] text-dark-muted uppercase">Total P&amp;L</p>
               <p className={`text-lg font-bold font-mono ${stats.totalPnl >= 0 ? 'neon-green' : 'neon-red'}`}>
                 {stats.totalPnl >= 0 ? '+' : ''}${fmt(stats.totalPnl)}
               </p>
@@ -182,13 +394,13 @@ export default function ProfilePage({ account, dashboard, bets }) {
         <div className="flex items-center gap-2">
           {RANKS.map((r, i) => {
             const isActive = r.name === rank.name;
-            const isPast = RANKS.indexOf(rank) > i;
+            const isPast   = RANKS.indexOf(rank) > i;
             return (
               <div key={r.name} className="flex-1 flex flex-col items-center gap-1">
                 <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg border-2 transition-all ${
                   isActive ? 'border-accent-orange scale-110' : isPast ? 'border-dark-muted/30' : 'border-dark-border'
                 } ${isActive ? 'badge-glow' : isPast ? '' : 'opacity-40'}`}
-                  style={{ backgroundColor: isActive || isPast ? `${r.color}20` : '#111118', color: r.color }}>
+                  style={{ backgroundColor: isActive||isPast ? `${r.color}20` : '#111118', color: r.color }}>
                   {r.icon}
                 </div>
                 <span className={`text-[9px] font-mono font-bold ${isActive ? 'text-accent-orange' : isPast ? 'text-dark-muted' : 'text-dark-muted/40'}`}>
@@ -215,28 +427,27 @@ export default function ProfilePage({ account, dashboard, bets }) {
             return (
               <div key={a.id}
                 className={`rounded-lg p-3 border transition-all ${
-                  unlocked
-                    ? 'border-accent-orange/30 bg-accent-orange/5 badge-glow'
-                    : 'border-dark-border bg-dark-bg badge-locked'
-                }`}
-              >
+                  unlocked ? 'border-accent-orange/30 bg-accent-orange/5 badge-glow' : 'border-dark-border bg-dark-bg badge-locked'
+                }`}>
                 <div className="flex items-center gap-2 mb-1.5">
                   <span className="text-lg">{a.icon}</span>
-                  <span className={`text-[11px] font-bold ${unlocked ? 'text-accent-orange' : 'text-dark-muted'}`}>
-                    {a.name}
-                  </span>
+                  <span className={`text-[11px] font-bold ${unlocked ? 'text-accent-orange' : 'text-dark-muted'}`}>{a.name}</span>
                 </div>
                 <p className="text-[10px] text-dark-muted leading-relaxed">{a.desc}</p>
-                {unlocked && (
-                  <div className="mt-1.5">
-                    <span className="text-[9px] font-mono text-accent-green">UNLOCKED</span>
-                  </div>
-                )}
+                {unlocked && <span className="mt-1.5 block text-[9px] font-mono text-accent-green">UNLOCKED</span>}
               </div>
             );
           })}
         </div>
       </div>
+
+      {/* ─── Trading Journal ─── */}
+      <TradingJournal />
+
+      {/* ─── Share Modal ─── */}
+      {showShare && (
+        <ShareModal stats={stats} rank={rank} username={username} account={account} onClose={() => setShowShare(false)} />
+      )}
     </div>
   );
 }
