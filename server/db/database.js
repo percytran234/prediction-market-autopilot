@@ -1,75 +1,143 @@
-import Database from 'better-sqlite3';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const DB_PATH = process.env.VERCEL
-  ? path.join('/tmp', 'prediction-agent.db')
-  : path.join(__dirname, '..', '..', 'prediction-agent.db');
 
 let db;
 
-export function getDb() {
-  if (!db) {
-    db = new Database(DB_PATH);
-    db.pragma('journal_mode = WAL');
-    db.pragma('foreign_keys = ON');
-    initializeSchema();
-  }
-  return db;
+// sql.js compatibility wrapper that matches better-sqlite3's API
+function wrapSqlJs(sqlJsDb) {
+  return {
+    _db: sqlJsDb,
+    prepare(sql) {
+      const database = this._db;
+      return {
+        get(...params) {
+          const stmt = database.prepare(sql);
+          if (params.length) stmt.bind(params);
+          let result;
+          if (stmt.step()) {
+            const cols = stmt.getColumnNames();
+            const vals = stmt.get();
+            result = Object.fromEntries(cols.map((c, i) => [c, vals[i]]));
+          }
+          stmt.free();
+          return result;
+        },
+        all(...params) {
+          const stmt = database.prepare(sql);
+          if (params.length) stmt.bind(params);
+          const rows = [];
+          while (stmt.step()) {
+            const cols = stmt.getColumnNames();
+            const vals = stmt.get();
+            rows.push(Object.fromEntries(cols.map((c, i) => [c, vals[i]])));
+          }
+          stmt.free();
+          return rows;
+        },
+        run(...params) {
+          const stmt = database.prepare(sql);
+          if (params.length) stmt.bind(params);
+          stmt.step();
+          stmt.free();
+          const result = database.exec('SELECT last_insert_rowid() as id');
+          return {
+            lastInsertRowid: result.length ? result[0].values[0][0] : 0,
+          };
+        },
+      };
+    },
+    exec(sql) {
+      this._db.exec(sql);
+    },
+    pragma(str) {
+      try {
+        this._db.exec(`PRAGMA ${str}`);
+      } catch {
+        // sql.js may not support all pragmas
+      }
+    },
+  };
 }
 
-function initializeSchema() {
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS wallet (
-      id INTEGER PRIMARY KEY DEFAULT 1,
-      address TEXT NOT NULL,
-      encrypted_key TEXT NOT NULL,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    );
+if (process.env.VERCEL) {
+  // Use sql.js (pure JS SQLite via WebAssembly) for Vercel serverless
+  const { default: initSqlJs } = await import('sql.js');
+  const { readFileSync } = await import('fs');
+  const { createRequire } = await import('module');
+  const require = createRequire(import.meta.url);
+  let wasmBinary;
+  try {
+    wasmBinary = readFileSync(require.resolve('sql.js/dist/sql-wasm.wasm'));
+  } catch {
+    // Fallback: let sql.js find it on its own
+  }
+  const SQL = await initSqlJs(wasmBinary ? { wasmBinary } : undefined);
+  db = wrapSqlJs(new SQL.Database());
+} else {
+  // Use better-sqlite3 for local development
+  const { default: Database } = await import('better-sqlite3');
+  const DB_PATH = path.join(__dirname, '..', '..', 'prediction-agent.db');
+  db = new Database(DB_PATH);
+}
 
-    CREATE TABLE IF NOT EXISTS sessions (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      user_address TEXT NOT NULL,
-      deposit_amount REAL DEFAULT 0,
-      bankroll REAL DEFAULT 0,
-      daily_start_bankroll REAL DEFAULT 0,
-      status TEXT DEFAULT 'idle',
-      stop_reason TEXT,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    );
+db.pragma('journal_mode = WAL');
+db.pragma('foreign_keys = ON');
 
-    CREATE TABLE IF NOT EXISTS bets (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      session_id INTEGER REFERENCES sessions(id),
-      round_time DATETIME NOT NULL,
-      direction TEXT,
-      confidence REAL,
-      amount REAL,
-      btc_price_start REAL,
-      btc_price_end REAL,
-      result TEXT,
-      pnl REAL DEFAULT 0,
-      bankroll_after REAL,
-      reasoning TEXT,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    );
+db.exec(`
+  CREATE TABLE IF NOT EXISTS wallet (
+    id INTEGER PRIMARY KEY DEFAULT 1,
+    address TEXT NOT NULL,
+    encrypted_key TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
 
-    CREATE TABLE IF NOT EXISTS daily_stats (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      session_id INTEGER REFERENCES sessions(id),
-      date TEXT NOT NULL,
-      start_bankroll REAL,
-      current_pnl REAL DEFAULT 0,
-      total_bets INTEGER DEFAULT 0,
-      wins INTEGER DEFAULT 0,
-      losses INTEGER DEFAULT 0,
-      skips INTEGER DEFAULT 0,
-      consecutive_losses INTEGER DEFAULT 0,
-      consecutive_wins INTEGER DEFAULT 0,
-      is_paused BOOLEAN DEFAULT 0,
-      pause_until DATETIME
-    );
-  `);
+  CREATE TABLE IF NOT EXISTS sessions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_address TEXT NOT NULL,
+    deposit_amount REAL DEFAULT 0,
+    bankroll REAL DEFAULT 0,
+    daily_start_bankroll REAL DEFAULT 0,
+    status TEXT DEFAULT 'idle',
+    stop_reason TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TABLE IF NOT EXISTS bets (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_id INTEGER REFERENCES sessions(id),
+    round_time DATETIME NOT NULL,
+    direction TEXT,
+    confidence REAL,
+    amount REAL,
+    btc_price_start REAL,
+    btc_price_end REAL,
+    result TEXT,
+    pnl REAL DEFAULT 0,
+    bankroll_after REAL,
+    reasoning TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TABLE IF NOT EXISTS daily_stats (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_id INTEGER REFERENCES sessions(id),
+    date TEXT NOT NULL,
+    start_bankroll REAL,
+    current_pnl REAL DEFAULT 0,
+    total_bets INTEGER DEFAULT 0,
+    wins INTEGER DEFAULT 0,
+    losses INTEGER DEFAULT 0,
+    skips INTEGER DEFAULT 0,
+    consecutive_losses INTEGER DEFAULT 0,
+    consecutive_wins INTEGER DEFAULT 0,
+    is_paused BOOLEAN DEFAULT 0,
+    pause_until DATETIME
+  );
+`);
+
+export function getDb() {
+  return db;
 }
