@@ -3,7 +3,9 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const DB_PATH = path.join(__dirname, '..', '..', 'prediction-agent.db');
+const DB_PATH = process.env.VERCEL
+  ? path.join('/tmp', 'prediction-agent.db')
+  : path.join(__dirname, '..', '..', 'prediction-agent.db');
 
 let db;
 
