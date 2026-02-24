@@ -18,11 +18,11 @@ function BestHourCard({ bets }) {
   }, [bets]);
 
   return (
-    <div className="terminal-card p-4 border border-accent-orange/20">
+    <div className="terminal-card p-4 border border-accent-green/20">
       <p className="text-[10px] font-semibold text-dark-muted uppercase tracking-wider mb-2">Best Hour to Trade</p>
       {best ? (
         <div className="flex items-center gap-4">
-          <span className="text-3xl font-bold font-mono neon-orange">{String(best.hour).padStart(2,'0')}:00</span>
+          <span className="text-3xl font-bold font-mono neon-green">{String(best.hour).padStart(2,'0')}:00</span>
           <div>
             <p className="text-sm font-bold neon-green">{((best.wins/best.total)*100).toFixed(0)}% win rate</p>
             <p className="text-[11px] text-dark-muted font-mono">{best.wins}W / {best.total-best.wins}L ({best.total} trades)</p>
@@ -45,9 +45,9 @@ function HourlyHeatmap({ bets }) {
   }, [bets]);
 
   function getCellColor(wins, total) {
-    if (!total) return '#1e1e2e';
+    if (!total) return '#1e3320';
     const r = wins/total;
-    return r>=0.7?'#00ff88':r>=0.5?'#22c55e':r>=0.4?'#ff6600':'#ff3333';
+    return r>=0.7?'#00e676':r>=0.5?'#69f0ae':r>=0.4?'#ffab00':'#ff1744';
   }
 
   return (
@@ -61,7 +61,7 @@ function HourlyHeatmap({ bets }) {
             <div key={h.hour} className="flex flex-col items-center gap-1">
               <div className="heatmap-cell w-full aspect-square flex items-center justify-center relative group cursor-default"
                 style={{backgroundColor:getCellColor(h.wins,h.total), opacity}}>
-                <span className="text-[8px] font-mono font-bold text-dark-bg">{h.total>0?rate:''}</span>
+                <span className="text-[8px] font-mono font-bold text-black">{h.total>0?rate:''}</span>
                 <div className="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 bg-dark-card border border-dark-border rounded px-2 py-1 text-[9px] font-mono whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity z-20 pointer-events-none">
                   <span className="text-dark-muted">{h.hour}:00</span>
                   <span className="text-dark-text ml-1">{h.wins}W/{h.total-h.wins}L</span>
@@ -73,7 +73,7 @@ function HourlyHeatmap({ bets }) {
         })}
       </div>
       <div className="flex items-center gap-3 mt-3 justify-center">
-        {[['#ff3333','<40%'],['#ff6600','40-50%'],['#22c55e','50-70%'],['#00ff88','>70%']].map(([c,l])=>(
+        {[['#ff1744','<40%'],['#ffab00','40-50%'],['#69f0ae','50-70%'],['#00e676','>70%']].map(([c,l])=>(
           <div key={l} className="flex items-center gap-1">
             <div className="w-3 h-3 rounded-sm" style={{backgroundColor:c,opacity:0.7}}/>
             <span className="text-[9px] text-dark-muted font-mono">{l}</span>
@@ -110,11 +110,11 @@ function ConfidenceChart({ bets }) {
       {empty ? <div className="h-[220px] flex items-center justify-center text-xs text-dark-muted font-mono">No data yet</div> : (
         <ResponsiveContainer width="100%" height={220}>
           <BarChart data={data} margin={{top:4,right:4,bottom:0,left:4}}>
-            <XAxis dataKey="range" tick={{fontSize:9,fill:'#6b7280',fontFamily:'JetBrains Mono'}} axisLine={false} tickLine={false}/>
-            <YAxis tick={{fontSize:9,fill:'#6b7280',fontFamily:'JetBrains Mono'}} axisLine={false} tickLine={false} tickFormatter={v=>`${v}%`} domain={[0,100]}/>
-            <Tooltip contentStyle={{background:'#111118',border:'1px solid #1e1e2e',borderRadius:8,fontSize:11,fontFamily:'JetBrains Mono'}} labelStyle={{color:'#6b7280'}} formatter={(v)=>[`${v}%`,'Win Rate']}/>
+            <XAxis dataKey="range" tick={{fontSize:9,fill:'#4a7a4e',fontFamily:'JetBrains Mono'}} axisLine={false} tickLine={false}/>
+            <YAxis tick={{fontSize:9,fill:'#4a7a4e',fontFamily:'JetBrains Mono'}} axisLine={false} tickLine={false} tickFormatter={v=>`${v}%`} domain={[0,100]}/>
+            <Tooltip contentStyle={{background:'#111a12',border:'1px solid #1e3320',borderRadius:8,fontSize:11,fontFamily:'JetBrains Mono'}} labelStyle={{color:'#4a7a4e'}} formatter={(v)=>[`${v}%`,'Win Rate']}/>
             <Bar dataKey="winRate" radius={[4,4,0,0]}>
-              {data.map((e,i)=><Cell key={i} fill={e.winRate>=50?'#00ff88':'#ff3333'} fillOpacity={0.8}/>)}
+              {data.map((e,i)=><Cell key={i} fill={e.winRate>=50?'#00e676':'#ff1744'} fillOpacity={0.8}/>)}
             </Bar>
           </BarChart>
         </ResponsiveContainer>
@@ -129,7 +129,7 @@ function DirectionPie({ bets }) {
     const resolved = (bets||[]).filter(b=>(b.result==='WIN'||b.result==='LOSS')&&b.direction!=='SKIP');
     const up = resolved.filter(b=>b.direction==='UP').length;
     const down = resolved.filter(b=>b.direction==='DOWN').length;
-    return [{name:'UP',value:up,color:'#00ff88'},{name:'DOWN',value:down,color:'#ff3333'}];
+    return [{name:'UP',value:up,color:'#00e676'},{name:'DOWN',value:down,color:'#ff1744'}];
   }, [bets]);
   const total = data[0].value+data[1].value;
   return (
@@ -182,11 +182,11 @@ function SevenDayChart({ bets }) {
       {!hasData ? <div className="h-[160px] flex items-center justify-center text-xs text-dark-muted font-mono">No recent data</div> : (
         <ResponsiveContainer width="100%" height={160}>
           <BarChart data={data} margin={{top:4,right:4,bottom:0,left:4}}>
-            <XAxis dataKey="label" tick={{fontSize:9,fill:'#6b7280',fontFamily:'JetBrains Mono'}} axisLine={false} tickLine={false}/>
-            <YAxis tick={{fontSize:9,fill:'#6b7280',fontFamily:'JetBrains Mono'}} axisLine={false} tickLine={false} tickFormatter={v=>`$${v.toFixed(0)}`} width={42}/>
-            <Tooltip contentStyle={{background:'#111118',border:'1px solid #1e1e2e',borderRadius:8,fontSize:11,fontFamily:'JetBrains Mono'}} labelStyle={{color:'#6b7280'}} formatter={(v)=>[`$${v.toFixed(2)}`,'P&L']}/>
+            <XAxis dataKey="label" tick={{fontSize:9,fill:'#4a7a4e',fontFamily:'JetBrains Mono'}} axisLine={false} tickLine={false}/>
+            <YAxis tick={{fontSize:9,fill:'#4a7a4e',fontFamily:'JetBrains Mono'}} axisLine={false} tickLine={false} tickFormatter={v=>`$${v.toFixed(0)}`} width={42}/>
+            <Tooltip contentStyle={{background:'#111a12',border:'1px solid #1e3320',borderRadius:8,fontSize:11,fontFamily:'JetBrains Mono'}} labelStyle={{color:'#4a7a4e'}} formatter={(v)=>[`$${v.toFixed(2)}`,'P&L']}/>
             <Bar dataKey="pnl" radius={[3,3,0,0]}>
-              {data.map((e,i)=><Cell key={i} fill={e.pnl>=0?'#00ff88':'#ff3333'} fillOpacity={0.8}/>)}
+              {data.map((e,i)=><Cell key={i} fill={e.pnl>=0?'#00e676':'#ff1744'} fillOpacity={0.8}/>)}
             </Bar>
           </BarChart>
         </ResponsiveContainer>
@@ -237,7 +237,7 @@ function StreaksSection({ bets }) {
           <div className="mt-2 flex justify-center gap-0.5">
             {Array.from({length:Math.min(Math.abs(curStreak),15)}).map((_,i)=>(
               <div key={i} className="w-1.5 h-4 rounded-sm animate-pulse"
-                style={{background:curStreak>0?'#00ff88':'#ff3333', opacity:0.6}}/>
+                style={{background:curStreak>0?'#00e676':'#ff1744', opacity:0.6}}/>
             ))}
           </div>
         </div>

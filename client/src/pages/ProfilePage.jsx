@@ -10,8 +10,8 @@ const RANKS = [
   { name: 'Bronze',   min: -Infinity, max: 0,   color: '#cd7f32', icon: '✦', gradient: 'from-[#cd7f32] to-[#8b4513]' },
   { name: 'Silver',   min: 0,         max: 50,  color: '#c0c0c0', icon: '✧', gradient: 'from-[#c0c0c0] to-[#808080]' },
   { name: 'Gold',     min: 50,        max: 200, color: '#ffd700', icon: '★', gradient: 'from-[#ffd700] to-[#ff8c00]' },
-  { name: 'Platinum', min: 200,       max: 500, color: '#e5e4e2', icon: '◆', gradient: 'from-[#e5e4e2] to-[#a0a0a0]' },
-  { name: 'Diamond',  min: 500,       max: Infinity, color: '#b9f2ff', icon: '❖', gradient: 'from-[#b9f2ff] to-[#00bfff]' },
+  { name: 'Platinum', min: 200,       max: 500, color: '#00e5ff', icon: '◆', gradient: 'from-[#00e5ff] to-[#0097a7]' },
+  { name: 'Diamond',  min: 500,       max: Infinity, color: '#00e676', icon: '❖', gradient: 'from-[#00e676] to-[#69f0ae]' },
 ];
 
 function getRank(pnl) {
@@ -49,7 +49,7 @@ const ACHIEVEMENTS = [
 function ShareModal({ stats, rank, username, account, onClose }) {
   const truncAddr = account ? `${account.slice(0, 6)}...${account.slice(-4)}` : '0x????...????';
   const pnlSign   = stats.totalPnl >= 0 ? '+' : '';
-  const pnlColor  = stats.totalPnl >= 0 ? '#00ff88' : '#ff3333';
+  const pnlColor  = stats.totalPnl >= 0 ? '#00e676' : '#ff1744';
 
   function copyText() {
     const text =
@@ -69,13 +69,13 @@ function ShareModal({ stats, rank, username, account, onClose }) {
       <div className="animate-modal-content w-full max-w-sm mx-4" onClick={e => e.stopPropagation()}>
         {/* Shareable card preview */}
         <div className="rounded-xl border border-dark-border overflow-hidden"
-          style={{ background: 'linear-gradient(135deg,#0a0a0f 0%,#111118 60%,#1a0a00 100%)' }}>
+          style={{ background: 'linear-gradient(135deg,#0a0f0a 0%,#111a12 60%,#0a1a0a 100%)' }}>
           {/* Header stripe */}
-          <div className="h-1 w-full" style={{ background: 'linear-gradient(90deg,#ff6600,#ff3333,#ff6600)' }} />
+          <div className="h-1 w-full" style={{ background: 'linear-gradient(90deg,#00e676,#69f0ae,#00e676)' }} />
 
           <div className="p-6 space-y-5">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-full border-2 border-accent-orange/50 flex items-center justify-center text-2xl"
+              <div className="w-12 h-12 rounded-full border-2 border-accent-green/50 flex items-center justify-center text-2xl"
                 style={{ color: rank.color }}>
                 {rank.icon}
               </div>
@@ -90,25 +90,25 @@ function ShareModal({ stats, rank, username, account, onClose }) {
             </div>
 
             <div className="grid grid-cols-2 gap-3">
-              <div className="rounded-lg p-3 text-center" style={{ background:'rgba(255,255,255,0.03)', border:'1px solid #1e1e2e' }}>
+              <div className="rounded-lg p-3 text-center" style={{ background:'rgba(255,255,255,0.03)', border:'1px solid #1e3320' }}>
                 <p className="text-[9px] text-dark-muted uppercase tracking-widest">Trades</p>
                 <p className="text-xl font-bold font-mono text-dark-text">{stats.totalTrades}</p>
               </div>
-              <div className="rounded-lg p-3 text-center" style={{ background:'rgba(255,255,255,0.03)', border:'1px solid #1e1e2e' }}>
+              <div className="rounded-lg p-3 text-center" style={{ background:'rgba(255,255,255,0.03)', border:'1px solid #1e3320' }}>
                 <p className="text-[9px] text-dark-muted uppercase tracking-widest">Win Rate</p>
-                <p className="text-xl font-bold font-mono" style={{ color: stats.winRate >= 50 ? '#00ff88' : '#ff3333' }}>
+                <p className="text-xl font-bold font-mono" style={{ color: stats.winRate >= 50 ? '#00e676' : '#ff1744' }}>
                   {fmt(stats.winRate, 1)}%
                 </p>
               </div>
-              <div className="rounded-lg p-3 text-center" style={{ background:'rgba(255,255,255,0.03)', border:'1px solid #1e1e2e' }}>
+              <div className="rounded-lg p-3 text-center" style={{ background:'rgba(255,255,255,0.03)', border:'1px solid #1e3320' }}>
                 <p className="text-[9px] text-dark-muted uppercase tracking-widest">Total P&L</p>
                 <p className="text-xl font-bold font-mono" style={{ color: pnlColor }}>
                   {pnlSign}${fmt(stats.totalPnl)}
                 </p>
               </div>
-              <div className="rounded-lg p-3 text-center" style={{ background:'rgba(255,255,255,0.03)', border:'1px solid #1e1e2e' }}>
+              <div className="rounded-lg p-3 text-center" style={{ background:'rgba(255,255,255,0.03)', border:'1px solid #1e3320' }}>
                 <p className="text-[9px] text-dark-muted uppercase tracking-widest">Best Streak</p>
-                <p className="text-xl font-bold font-mono" style={{ color:'#ff6600' }}>{stats.bestWinStreak}W</p>
+                <p className="text-xl font-bold font-mono" style={{ color:'#00e676' }}>{stats.bestWinStreak}W</p>
               </div>
             </div>
 
@@ -120,7 +120,7 @@ function ShareModal({ stats, rank, username, account, onClose }) {
 
         <div className="mt-3 flex gap-2">
           <button onClick={copyText}
-            className="flex-1 py-2 bg-accent-orange text-dark-bg text-xs font-bold rounded-lg hover:brightness-110 transition font-mono">
+            className="flex-1 py-2 bg-accent-green text-black text-xs font-bold rounded-lg hover:brightness-110 transition font-mono">
             Copy to Clipboard
           </button>
           <button onClick={onClose}
@@ -181,14 +181,14 @@ function TradingJournal() {
         <label className="text-[11px] text-dark-muted font-mono">Date:</label>
         <input type="date" value={selectedDate}
           onChange={e => setSelectedDate(e.target.value)}
-          className="bg-dark-bg border border-dark-border rounded px-2 py-1 text-xs font-mono text-dark-text focus:outline-none focus:border-accent-orange/50" />
+          className="bg-dark-bg border border-dark-border rounded px-2 py-1 text-xs font-mono text-dark-text focus:outline-none focus:border-accent-green/50" />
         {datesWithEntries.length > 0 && (
           <div className="flex gap-1 flex-wrap">
             {datesWithEntries.slice(0, 5).map(d => (
               <button key={d} onClick={() => setSelectedDate(d)}
                 className={`text-[9px] font-mono px-2 py-0.5 rounded border transition ${
                   d === selectedDate
-                    ? 'border-accent-orange/40 bg-accent-orange/10 text-accent-orange'
+                    ? 'border-accent-green/40 bg-accent-green/10 text-accent-green'
                     : 'border-dark-border text-dark-muted hover:border-dark-muted'
                 }`}>
                 {d.slice(5)} {/* MM-DD */}
@@ -203,7 +203,7 @@ function TradingJournal() {
         onChange={handleChange}
         placeholder={`Notes for ${selectedDate}...\n\nWhat did the market do today? How did the agent perform? Any observations about strategy or conditions?`}
         rows={7}
-        className="w-full bg-dark-bg border border-dark-border rounded-lg px-3 py-2.5 text-xs font-mono text-dark-text placeholder-dark-muted/40 focus:outline-none focus:border-accent-orange/40 resize-none scrollbar-thin"
+        className="w-full bg-dark-bg border border-dark-border rounded-lg px-3 py-2.5 text-xs font-mono text-dark-text placeholder-dark-muted/40 focus:outline-none focus:border-accent-green/40 resize-none scrollbar-thin"
       />
 
       <div className="flex justify-between items-center text-[10px] text-dark-muted font-mono">
@@ -306,16 +306,16 @@ export default function ProfilePage({ account, dashboard, bets }) {
                   onKeyDown={handleNameKey}
                   onBlur={saveName}
                   maxLength={30}
-                  className="bg-dark-bg border border-accent-orange/50 rounded px-2 py-1 text-lg font-bold text-dark-text focus:outline-none focus:border-accent-orange font-mono"
+                  className="bg-dark-bg border border-accent-green/50 rounded px-2 py-1 text-lg font-bold text-dark-text focus:outline-none focus:border-accent-green font-mono"
                 />
                 <button onClick={saveName}
-                  className="text-[11px] px-2 py-1 bg-accent-orange/20 text-accent-orange border border-accent-orange/30 rounded hover:bg-accent-orange/30 transition font-mono">
+                  className="text-[11px] px-2 py-1 bg-accent-green/20 text-accent-green border border-accent-green/30 rounded hover:bg-accent-green/30 transition font-mono">
                   Save
                 </button>
               </div>
             ) : (
               <div className="flex items-center gap-2 group cursor-pointer" onClick={startEditName}>
-                <h3 className="text-xl font-bold text-dark-text group-hover:text-accent-orange transition">{username}</h3>
+                <h3 className="text-xl font-bold text-dark-text group-hover:text-accent-green transition">{username}</h3>
                 <span className="text-[10px] text-dark-muted/50 group-hover:text-dark-muted transition font-mono">[edit]</span>
               </div>
             )}
@@ -357,7 +357,7 @@ export default function ProfilePage({ account, dashboard, bets }) {
 
             {/* Share button */}
             <button onClick={() => setShowShare(true)}
-              className="mt-4 inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono font-bold text-accent-orange border border-accent-orange/30 bg-accent-orange/5 rounded-lg hover:bg-accent-orange/15 transition">
+              className="mt-4 inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono font-bold text-accent-green border border-accent-green/30 bg-accent-green/5 rounded-lg hover:bg-accent-green/15 transition">
               ↗ Share Stats
             </button>
           </div>
@@ -382,7 +382,7 @@ export default function ProfilePage({ account, dashboard, bets }) {
             </div>
             <div className="terminal-card p-3 min-w-[90px]">
               <p className="text-[10px] text-dark-muted uppercase">Best Streak</p>
-              <p className="text-lg font-bold font-mono neon-orange">{stats.bestWinStreak}W</p>
+              <p className="text-lg font-bold font-mono neon-green">{stats.bestWinStreak}W</p>
             </div>
           </div>
         </div>
@@ -398,12 +398,12 @@ export default function ProfilePage({ account, dashboard, bets }) {
             return (
               <div key={r.name} className="flex-1 flex flex-col items-center gap-1">
                 <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg border-2 transition-all ${
-                  isActive ? 'border-accent-orange scale-110' : isPast ? 'border-dark-muted/30' : 'border-dark-border'
+                  isActive ? 'border-accent-green scale-110' : isPast ? 'border-dark-muted/30' : 'border-dark-border'
                 } ${isActive ? 'badge-glow' : isPast ? '' : 'opacity-40'}`}
-                  style={{ backgroundColor: isActive||isPast ? `${r.color}20` : '#111118', color: r.color }}>
+                  style={{ backgroundColor: isActive||isPast ? `${r.color}20` : '#111a12', color: r.color }}>
                   {r.icon}
                 </div>
-                <span className={`text-[9px] font-mono font-bold ${isActive ? 'text-accent-orange' : isPast ? 'text-dark-muted' : 'text-dark-muted/40'}`}>
+                <span className={`text-[9px] font-mono font-bold ${isActive ? 'text-accent-green' : isPast ? 'text-dark-muted' : 'text-dark-muted/40'}`}>
                   {r.name}
                 </span>
                 <span className="text-[8px] font-mono text-dark-muted/50">
@@ -419,7 +419,7 @@ export default function ProfilePage({ account, dashboard, bets }) {
       <div className="terminal-card p-4">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-xs font-semibold text-dark-muted uppercase tracking-wider">Achievements</h3>
-          <span className="text-[11px] font-mono text-accent-orange">{unlockedCount}/{ACHIEVEMENTS.length} Unlocked</span>
+          <span className="text-[11px] font-mono text-accent-green">{unlockedCount}/{ACHIEVEMENTS.length} Unlocked</span>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
           {ACHIEVEMENTS.map(a => {
@@ -427,11 +427,11 @@ export default function ProfilePage({ account, dashboard, bets }) {
             return (
               <div key={a.id}
                 className={`rounded-lg p-3 border transition-all ${
-                  unlocked ? 'border-accent-orange/30 bg-accent-orange/5 badge-glow' : 'border-dark-border bg-dark-bg badge-locked'
+                  unlocked ? 'border-accent-green/30 bg-accent-green/5 badge-glow' : 'border-dark-border bg-dark-bg badge-locked'
                 }`}>
                 <div className="flex items-center gap-2 mb-1.5">
                   <span className="text-lg">{a.icon}</span>
-                  <span className={`text-[11px] font-bold ${unlocked ? 'text-accent-orange' : 'text-dark-muted'}`}>{a.name}</span>
+                  <span className={`text-[11px] font-bold ${unlocked ? 'text-accent-green' : 'text-dark-muted'}`}>{a.name}</span>
                 </div>
                 <p className="text-[10px] text-dark-muted leading-relaxed">{a.desc}</p>
                 {unlocked && <span className="mt-1.5 block text-[9px] font-mono text-accent-green">UNLOCKED</span>}

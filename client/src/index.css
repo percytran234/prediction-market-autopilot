@@ -10,39 +10,39 @@ body {
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background: #0a0a0f;
+  background: #0a0f0a;
 }
 
 /* ─── Scrollbar ─── */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: #0a0a0f; }
-::-webkit-scrollbar-thumb { background: #1e1e2e; border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #2a2d3a; }
+::-webkit-scrollbar-track { background: #0a0f0a; }
+::-webkit-scrollbar-thumb { background: #1e3320; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #2a4a2e; }
 
 .scrollbar-thin::-webkit-scrollbar { width: 4px; }
 .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
-.scrollbar-thin::-webkit-scrollbar-thumb { background: #2a2d3a; border-radius: 2px; }
+.scrollbar-thin::-webkit-scrollbar-thumb { background: #1e3320; border-radius: 2px; }
 
 /* ─── Grid Background Pattern ─── */
 .grid-bg {
   background-image:
-    linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+    linear-gradient(rgba(0,230,118,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,230,118,0.03) 1px, transparent 1px);
   background-size: 40px 40px;
 }
 
 /* ─── Neon Glow Effects ─── */
 .neon-green {
-  color: #00ff88;
-  text-shadow: 0 0 7px rgba(0,255,136,0.6), 0 0 20px rgba(0,255,136,0.3);
+  color: #00e676;
+  text-shadow: 0 0 7px rgba(0,230,118,0.6), 0 0 20px rgba(0,230,118,0.3);
 }
 .neon-red {
-  color: #ff3333;
-  text-shadow: 0 0 7px rgba(255,51,51,0.6), 0 0 20px rgba(255,51,51,0.3);
+  color: #ff1744;
+  text-shadow: 0 0 7px rgba(255,23,68,0.6), 0 0 20px rgba(255,23,68,0.3);
 }
 .neon-orange {
-  color: #ff6600;
-  text-shadow: 0 0 7px rgba(255,102,0,0.6), 0 0 20px rgba(255,102,0,0.3);
+  color: #00e676;
+  text-shadow: 0 0 7px rgba(0,230,118,0.6), 0 0 20px rgba(0,230,118,0.3);
 }
 .neon-blue {
   color: #3b82f6;
@@ -52,14 +52,14 @@ body {
 /* ─── Glow borders for cards ─── */
 .glow-card {
   position: relative;
-  border: 1px solid #1e1e2e;
+  border: 1px solid #1e3320;
 }
 .glow-card::after {
   content: '';
   position: absolute;
   inset: -1px;
   border-radius: inherit;
-  background: linear-gradient(135deg, rgba(255,102,0,0.1) 0%, rgba(255,51,51,0.05) 50%, transparent 100%);
+  background: linear-gradient(135deg, rgba(0,230,118,0.08) 0%, rgba(0,230,118,0.03) 50%, transparent 100%);
   z-index: 0;
   pointer-events: none;
   opacity: 0;
@@ -87,16 +87,16 @@ body {
 }
 
 @keyframes neon-pulse {
-  0%, 100% { text-shadow: 0 0 7px rgba(0,255,136,0.6), 0 0 20px rgba(0,255,136,0.3); }
-  50% { text-shadow: 0 0 14px rgba(0,255,136,0.8), 0 0 40px rgba(0,255,136,0.5), 0 0 60px rgba(0,255,136,0.2); }
+  0%, 100% { text-shadow: 0 0 7px rgba(0,230,118,0.6), 0 0 20px rgba(0,230,118,0.3); }
+  50% { text-shadow: 0 0 14px rgba(0,230,118,0.8), 0 0 40px rgba(0,230,118,0.5), 0 0 60px rgba(0,230,118,0.2); }
 }
 .animate-neon-pulse {
   animation: neon-pulse 2s ease-in-out infinite;
 }
 
 @keyframes neon-pulse-red {
-  0%, 100% { text-shadow: 0 0 7px rgba(255,51,51,0.6), 0 0 20px rgba(255,51,51,0.3); }
-  50% { text-shadow: 0 0 14px rgba(255,51,51,0.8), 0 0 40px rgba(255,51,51,0.5), 0 0 60px rgba(255,51,51,0.2); }
+  0%, 100% { text-shadow: 0 0 7px rgba(255,23,68,0.6), 0 0 20px rgba(255,23,68,0.3); }
+  50% { text-shadow: 0 0 14px rgba(255,23,68,0.8), 0 0 40px rgba(255,23,68,0.5), 0 0 60px rgba(255,23,68,0.2); }
 }
 .animate-neon-pulse-red {
   animation: neon-pulse-red 2s ease-in-out infinite;
@@ -108,21 +108,21 @@ body {
 .spinner {
   width: 28px;
   height: 28px;
-  border: 3px solid #2a2d3a;
-  border-top-color: #ff6600;
+  border: 3px solid #1e3320;
+  border-top-color: #00e676;
   border-radius: 50%;
   animation: spin 0.7s linear infinite;
 }
 
 @keyframes status-pulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(0,255,136,0.5); }
-  50% { box-shadow: 0 0 0 6px rgba(0,255,136,0); }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(0,230,118,0.5); }
+  50% { box-shadow: 0 0 0 6px rgba(0,230,118,0); }
 }
 .status-dot-active {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #00ff88;
+  background: #00e676;
   animation: status-pulse 2s ease-in-out infinite;
 }
 
@@ -161,19 +161,19 @@ body {
   gap: 0.75rem;
   padding: 0.75rem 1rem;
   border-radius: 0.5rem;
-  color: #6b7280;
+  color: #4a7a4e;
   font-size: 0.875rem;
   font-weight: 500;
   transition: all 0.2s ease;
   position: relative;
 }
 .sidebar-link:hover {
-  color: #e2e8f0;
-  background: rgba(255,102,0,0.05);
+  color: #e8f5e9;
+  background: rgba(0,230,118,0.05);
 }
 .sidebar-link.active {
-  color: #ff6600;
-  background: rgba(255,102,0,0.1);
+  color: #00e676;
+  background: rgba(0,230,118,0.1);
 }
 .sidebar-link.active::before {
   content: '';
@@ -183,15 +183,15 @@ body {
   transform: translateY(-50%);
   width: 3px;
   height: 60%;
-  background: #ff6600;
+  background: #00e676;
   border-radius: 0 3px 3px 0;
-  box-shadow: 0 0 8px rgba(255,102,0,0.5);
+  box-shadow: 0 0 8px rgba(0,230,118,0.5);
 }
 
 /* ─── Terminal card style ─── */
 .terminal-card {
-  background: #111118;
-  border: 1px solid #1e1e2e;
+  background: #111a12;
+  border: 1px solid #1e3320;
   border-radius: 0.75rem;
 }
 
@@ -207,15 +207,15 @@ body {
 
 /* ─── Achievement badge ─── */
 .badge-glow {
-  box-shadow: 0 0 12px rgba(255,102,0,0.3);
+  box-shadow: 0 0 12px rgba(0,230,118,0.3);
 }
 .badge-locked {
-  filter: grayscale(1) brightness(0.4);
+  filter: grayscale(1) brightness(0.3);
 }
 
 /* ─── Gradient border for avatar ─── */
 .avatar-gradient {
-  background: linear-gradient(135deg, #ff6600, #ff3333, #ff6600);
+  background: linear-gradient(135deg, #00e676, #69f0ae, #00e676);
   padding: 3px;
   border-radius: 50%;
 }
@@ -223,7 +223,7 @@ body {
 /* ─── Risk meter gauge ─── */
 .gauge-track {
   fill: none;
-  stroke: #1e1e2e;
+  stroke: #1e3320;
   stroke-width: 8;
 }
 .gauge-fill {
@@ -239,7 +239,7 @@ body {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  color: #6b7280;
+  color: #4a7a4e;
   padding: 0.625rem 0.75rem;
   white-space: nowrap;
 }
@@ -302,8 +302,8 @@ body {
 
 /* ─── Wallet connect button glow ─── */
 @keyframes wallet-glow {
-  0%, 100% { box-shadow: 0 0 10px rgba(0,255,136,0.4), 0 0 25px rgba(0,255,136,0.2), inset 0 0 8px rgba(0,255,136,0.1); }
-  50% { box-shadow: 0 0 20px rgba(0,255,136,0.6), 0 0 45px rgba(0,255,136,0.3), 0 0 70px rgba(0,255,136,0.15), inset 0 0 15px rgba(0,255,136,0.15); }
+  0%, 100% { box-shadow: 0 0 10px rgba(0,230,118,0.4), 0 0 25px rgba(0,230,118,0.2), inset 0 0 8px rgba(0,230,118,0.1); }
+  50% { box-shadow: 0 0 20px rgba(0,230,118,0.6), 0 0 45px rgba(0,230,118,0.3), 0 0 70px rgba(0,230,118,0.15), inset 0 0 15px rgba(0,230,118,0.15); }
 }
 .wallet-btn-glow {
   animation: wallet-glow 2s ease-in-out infinite;
@@ -317,11 +317,11 @@ body {
   min-width: 18px;
   height: 18px;
   padding: 0 4px;
-  border: 1px solid #2a2d3a;
+  border: 1px solid #1e3320;
   border-radius: 3px;
-  background: #1a1a28;
+  background: #0d1410;
   font-family: 'JetBrains Mono', monospace;
   font-size: 9px;
-  color: #6b7280;
+  color: #4a7a4e;
   line-height: 1;
 }

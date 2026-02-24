@@ -187,7 +187,7 @@ function AppInner() {
           <div className="px-6 py-3 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <span className="text-[10px] font-mono text-dark-muted uppercase tracking-widest">Prediction Market Auto-Pilot</span>
-              <span className="text-[9px] px-2 py-0.5 rounded-full bg-accent-orange/10 text-accent-orange border border-accent-orange/20 font-mono font-bold">
+              <span className="text-[9px] px-2 py-0.5 rounded-full bg-accent-green/10 text-accent-green border border-accent-green/20 font-mono font-bold">
                 TESTNET
               </span>
               <div className="hidden sm:flex items-center gap-1 ml-4">
@@ -204,13 +204,13 @@ function AppInner() {
                   <span className="text-xs font-mono text-dark-muted">{account.slice(0, 6)}...{account.slice(-4)}</span>
                 </div>
                 <button onClick={disconnectWallet}
-                  className="px-3 py-1.5 text-[11px] text-dark-muted border border-dark-border rounded-lg hover:bg-accent-red/10 hover:text-accent-red hover:border-accent-red/30 transition font-mono">
+                  className="px-3 py-1.5 text-[11px] text-[#00e676] bg-[#1e3320] border border-[#1e3320] rounded-lg hover:bg-accent-red/10 hover:text-accent-red hover:border-accent-red/30 transition font-mono">
                   Disconnect
                 </button>
               </div>
             ) : (
               <button onClick={connectWallet} disabled={connecting}
-                className="px-6 py-2.5 bg-[#00ff88] text-[#0a0a0f] text-sm font-extrabold rounded-xl hover:brightness-110 transition disabled:opacity-50 font-mono wallet-btn-glow border-2 border-[#00ff88]/60 tracking-wide">
+                className="px-6 py-2.5 bg-[#00e676] text-black text-sm font-extrabold rounded-xl hover:brightness-110 transition disabled:opacity-50 font-mono wallet-btn-glow border-2 border-[#00e676]/60 tracking-wide">
                 {connecting ? 'Connecting...' : 'Connect Wallet'}
               </button>
             )}

@@ -49,16 +49,16 @@ const NAV_ITEMS = [
 
 export default function Sidebar({ soundEnabled, onToggleSound }) {
   return (
-    <aside className="fixed left-0 top-0 bottom-0 w-[220px] bg-dark-card border-r border-dark-border flex flex-col z-40">
+    <aside className="fixed left-0 top-0 bottom-0 w-[220px] bg-[#0d1410] border-r border-dark-border flex flex-col z-40">
       {/* Logo */}
       <div className="px-4 py-5 border-b border-dark-border">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-accent-orange to-accent-red flex items-center justify-center text-white font-bold text-sm">
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#00e676] to-[#69f0ae] flex items-center justify-center text-black font-bold text-sm">
             PA
           </div>
           <div>
             <h1 className="text-sm font-bold text-dark-text tracking-tight">Prediction Agent</h1>
-            <p className="text-[10px] text-accent-orange font-mono">PRO TRADER</p>
+            <p className="text-[10px] text-[#00e676] font-mono">PRO TRADER</p>
           </div>
         </div>
       </div>

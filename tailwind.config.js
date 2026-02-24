@@ -5,17 +5,19 @@ export default {
     extend: {
       colors: {
         dark: {
-          bg: '#0f1117',
-          card: '#1a1d29',
-          border: '#2a2d3a',
-          text: '#e1e4eb',
-          muted: '#8b8fa3',
+          bg: '#0a0f0a',
+          card: '#111a12',
+          border: '#1e3320',
+          text: '#e8f5e9',
+          muted: '#4a7a4e',
+          hover: '#152416',
         },
         accent: {
-          green: '#22c55e',
-          red: '#ef4444',
+          green: '#00e676',
+          red: '#ff1744',
           blue: '#3b82f6',
-          yellow: '#eab308',
+          yellow: '#ff9100',
+          orange: '#00e676', // alias → green (backward compat)
         },
       },
     },

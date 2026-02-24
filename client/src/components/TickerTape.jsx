@@ -28,7 +28,7 @@ export default function TickerTape() {
   const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 
   return (
-    <div className="h-6 bg-dark-card/80 border-b border-dark-border overflow-hidden flex items-center">
+    <div className="h-6 bg-[#050f05] border-b border-dark-border overflow-hidden flex items-center">
       <div className="ticker-scroll flex items-center gap-8 px-4 whitespace-nowrap text-[10px] font-mono">
         <span className="text-dark-muted">BTC/USDT</span>
         {price ? (
@@ -44,15 +44,15 @@ export default function TickerTape() {
           <span className="text-dark-muted">Loading...</span>
         )}
         <span className="text-dark-muted/50">{timeStr} UTC</span>
-        <span className="text-dark-muted/30">|</span>
+        <span className="text-[#1e3320]">|</span>
         <span className="text-dark-muted">ETH/USDT</span>
         <span className="text-dark-muted/50">—</span>
-        <span className="text-dark-muted/30">|</span>
+        <span className="text-[#1e3320]">|</span>
         <span className="text-dark-muted">SOL/USDT</span>
         <span className="text-dark-muted/50">—</span>
-        <span className="text-dark-muted/30">|</span>
-        <span className="text-accent-orange/60">PREDICTION AGENT PRO</span>
-        <span className="text-dark-muted/30">|</span>
+        <span className="text-[#1e3320]">|</span>
+        <span className="text-[#00e676]/60">PREDICTION AGENT PRO</span>
+        <span className="text-[#1e3320]">|</span>
         <span className="text-dark-muted">BTC/USDT</span>
         {price ? (
           <>
