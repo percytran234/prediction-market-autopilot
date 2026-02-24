@@ -11,8 +11,13 @@ function formatPrice(val) {
   if (val == null) return '—';
   return '$' + parseFloat(val).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
+function getDateStr(iso) {
+  if (!iso) return '';
+  return new Date(iso).toISOString().slice(0, 10);
+}
 
 const ROWS_PER_PAGE = 10;
+const DAILY_HISTORY_KEY = 'prediction_agent_daily_history';
 
 // ─── Trade Detail Modal ───
 function TradeModal({ bet, onClose }) {
@@ -89,20 +94,37 @@ function PnlTooltip({ active, payload }) {
   );
 }
 
-export default function HistoryPage({ bets }) {
+export default function HistoryPage({ bets, engine }) {
   const [filter, setFilter] = useState('ALL');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [page, setPage] = useState(0);
   const [selectedBet, setSelectedBet] = useState(null);
 
+  // Combine current session bets with daily history
+  const allBets = useMemo(() => {
+    const current = bets || [];
+    const currentIds = new Set(current.map(b => b.id));
+    let historical = [];
+    try {
+      const raw = localStorage.getItem(DAILY_HISTORY_KEY);
+      if (raw) {
+        const days = JSON.parse(raw);
+        historical = days.flatMap(d => (d.trades || []).filter(b => !currentIds.has(b.id)));
+      }
+    } catch {}
+    const combined = [...current, ...historical];
+    combined.sort((a, b) => new Date(b.round_time).getTime() - new Date(a.round_time).getTime());
+    return combined;
+  }, [bets]);
+
   const filtered = useMemo(() => {
-    let list = bets || [];
+    let list = allBets;
     if (filter !== 'ALL') list = list.filter(b => b.result === filter);
     if (dateFrom) { const from = new Date(dateFrom).getTime(); list = list.filter(b => new Date(b.round_time).getTime() >= from); }
     if (dateTo)   { const to = new Date(dateTo).getTime()+86400000; list = list.filter(b => new Date(b.round_time).getTime() < to); }
     return list;
-  }, [bets, filter, dateFrom, dateTo]);
+  }, [allBets, filter, dateFrom, dateTo]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / ROWS_PER_PAGE));
   const currentPage = Math.min(page, totalPages - 1);
@@ -113,7 +135,23 @@ export default function HistoryPage({ bets }) {
   const winCount = resolved.filter(b => b.result==='WIN').length;
   const winRate = resolved.length > 0 ? (winCount / resolved.length) * 100 : 0;
 
-  // Cumulative P&L chart data
+  // Daily summaries for date headers
+  const dailySummaries = useMemo(() => {
+    const sums = {};
+    filtered.forEach(bet => {
+      const date = getDateStr(bet.round_time);
+      if (!date) return;
+      if (!sums[date]) sums[date] = { trades: 0, wins: 0, pnl: 0 };
+      if (bet.result === 'WIN' || bet.result === 'LOSS') {
+        sums[date].trades++;
+        if (bet.result === 'WIN') sums[date].wins++;
+        sums[date].pnl += (bet.pnl || 0);
+      }
+    });
+    return sums;
+  }, [filtered]);
+
+  // Cumulative P&L chart data (all time)
   const cumPnlData = useMemo(() => {
     const chron = [...resolved].reverse();
     let cum = 0;
@@ -132,6 +170,8 @@ export default function HistoryPage({ bets }) {
     a.href = url; a.download = `trades_${new Date().toISOString().slice(0,10)}.csv`; a.click();
     URL.revokeObjectURL(url);
   }
+
+  const today = new Date().toISOString().slice(0, 10);
 
   return (
     <div className="space-y-4">
@@ -230,36 +270,68 @@ export default function HistoryPage({ bets }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {paginated.map(bet => {
+                  {paginated.map((bet, idx) => {
+                    const betDate = getDateStr(bet.round_time);
+                    const prevBet = idx > 0 ? paginated[idx - 1] : null;
+                    const prevDate = prevBet ? getDateStr(prevBet.round_time) : null;
+                    const showHeader = !prevDate || betDate !== prevDate;
+                    const daySummary = dailySummaries[betDate];
+                    const dayWinRate = daySummary && daySummary.trades > 0 ? (daySummary.wins / daySummary.trades) * 100 : 0;
+
                     const isWin = bet.result==='WIN', isLoss = bet.result==='LOSS';
                     const isPending = bet.result==='PENDING', isSkip = bet.result==='SKIP';
                     const rowBg = isWin ? 'bg-accent-green/[0.04]' : isLoss ? 'bg-accent-red/[0.04]' : '';
                     return (
-                      <tr key={bet.id}
-                        className={`border-b border-dark-border/30 hover:bg-dark-hover transition-colors cursor-pointer ${rowBg}`}
-                        onClick={() => setSelectedBet(bet)}>
-                        <td className="text-dark-muted">{formatDateTime(bet.round_time)}</td>
-                        <td className="text-center">
-                          {bet.direction&&bet.direction!=='SKIP'
-                            ? <span className={bet.direction==='UP'?'text-accent-green':'text-accent-red'}>{bet.direction==='UP'?'▲':'▼'} {bet.direction}</span>
-                            : <span className="text-dark-muted">—</span>}
-                        </td>
-                        <td className="text-right text-dark-muted">{bet.confidence!=null?`${fmt(bet.confidence,1)}%`:'—'}</td>
-                        <td className="text-right">{isSkip?'—':`$${fmt(bet.amount)}`}</td>
-                        <td className="text-right text-dark-muted">{isSkip?'—':formatPrice(bet.btc_price_start)}</td>
-                        <td className="text-right text-dark-muted">{isSkip||isPending?'—':formatPrice(bet.btc_price_end)}</td>
-                        <td className="text-center">
-                          <span className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                            isWin?'bg-accent-green/15 text-accent-green'
-                            :isLoss?'bg-accent-red/15 text-accent-red'
-                            :isPending?'bg-accent-blue/15 text-accent-blue'
-                            :'bg-dark-border text-dark-muted'}`}>{bet.result}</span>
-                        </td>
-                        <td className={`text-right font-bold ${(bet.pnl||0)>0?'text-accent-green':(bet.pnl||0)<0?'text-accent-red':'text-dark-muted'}`}>
-                          {isSkip?'—':`${(bet.pnl||0)>=0?'+$':'-$'}${Math.abs(bet.pnl||0).toFixed(2)}`}
-                        </td>
-                        <td className="text-right text-dark-muted">${fmt(bet.bankroll_after)}</td>
-                      </tr>
+                      <React.Fragment key={bet.id}>
+                        {showHeader && (
+                          <tr className="bg-dark-bg/80 border-b border-accent-orange/20">
+                            <td colSpan={9} className="px-4 py-2.5">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-[10px] text-accent-orange">&#9632;</span>
+                                  <span className="text-xs font-bold text-dark-text font-mono">
+                                    {betDate === today ? `Today (${betDate})` : betDate}
+                                  </span>
+                                </div>
+                                {daySummary && (
+                                  <div className="flex items-center gap-4 text-[10px] font-mono">
+                                    <span className="text-dark-muted">{daySummary.trades} trades</span>
+                                    <span className={daySummary.pnl >= 0 ? 'text-accent-green' : 'text-accent-red'}>
+                                      {daySummary.pnl >= 0 ? '+' : ''}${daySummary.pnl.toFixed(2)}
+                                    </span>
+                                    <span className="text-dark-muted">WR: {dayWinRate.toFixed(1)}%</span>
+                                  </div>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                        <tr
+                          className={`border-b border-dark-border/30 hover:bg-dark-hover transition-colors cursor-pointer ${rowBg}`}
+                          onClick={() => setSelectedBet(bet)}>
+                          <td className="text-dark-muted">{formatDateTime(bet.round_time)}</td>
+                          <td className="text-center">
+                            {bet.direction&&bet.direction!=='SKIP'
+                              ? <span className={bet.direction==='UP'?'text-accent-green':'text-accent-red'}>{bet.direction==='UP'?'▲':'▼'} {bet.direction}</span>
+                              : <span className="text-dark-muted">—</span>}
+                          </td>
+                          <td className="text-right text-dark-muted">{bet.confidence!=null?`${fmt(bet.confidence,1)}%`:'—'}</td>
+                          <td className="text-right">{isSkip?'—':`$${fmt(bet.amount)}`}</td>
+                          <td className="text-right text-dark-muted">{isSkip?'—':formatPrice(bet.btc_price_start)}</td>
+                          <td className="text-right text-dark-muted">{isSkip||isPending?'—':formatPrice(bet.btc_price_end)}</td>
+                          <td className="text-center">
+                            <span className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                              isWin?'bg-accent-green/15 text-accent-green'
+                              :isLoss?'bg-accent-red/15 text-accent-red'
+                              :isPending?'bg-accent-blue/15 text-accent-blue'
+                              :'bg-dark-border text-dark-muted'}`}>{bet.result}</span>
+                          </td>
+                          <td className={`text-right font-bold ${(bet.pnl||0)>0?'text-accent-green':(bet.pnl||0)<0?'text-accent-red':'text-dark-muted'}`}>
+                            {isSkip?'—':`${(bet.pnl||0)>=0?'+$':'-$'}${Math.abs(bet.pnl||0).toFixed(2)}`}
+                          </td>
+                          <td className="text-right text-dark-muted">${fmt(bet.bankroll_after)}</td>
+                        </tr>
+                      </React.Fragment>
                     );
                   })}
                 </tbody>

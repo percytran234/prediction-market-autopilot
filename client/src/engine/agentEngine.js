@@ -5,13 +5,16 @@ import { computeSignals } from './signalEngine.js';
 import { getCurrentBTCPrice, fetchBTCKlines } from './priceService.js';
 
 const STORAGE_KEY = 'prediction_agent_state';
+const STRAT_KEY = 'prediction_agent_strategy';
+const DAILY_HISTORY_KEY = 'prediction_agent_daily_history';
 const ROUND_INTERVAL_MS = 60_000; // 1 minute
-const CONFIDENCE_THRESHOLD = 60;
-const BET_PERCENT = 0.02;
-const BET_PERCENT_STREAK = 0.03;
-const LOSS_LIMIT = -0.10;
-const PROFIT_TARGET = 0.05;
 const MAX_CONSECUTIVE_LOSSES = 4;
+
+const STRATEGIES = {
+  safe:       { betPct: 0.02, lossLimit: -0.10, profitTarget: 0.05, confThresh: 65 },
+  balanced:   { betPct: 0.03, lossLimit: -0.15, profitTarget: 0.08, confThresh: 60 },
+  aggressive: { betPct: 0.05, lossLimit: -0.20, profitTarget: 0.12, confThresh: 55 },
+};
 
 // --------------- Persistence ---------------
 
@@ -43,6 +46,7 @@ function defaultState() {
     totalDeposited: 0,
     pendingBet: null,
     priceHistory: [], // { time, price }
+    sessionDate: new Date().toISOString().slice(0, 10),
   };
 }
 
@@ -52,13 +56,33 @@ export class AgentEngine {
   constructor(onChange) {
     this.onChange = onChange;
     this.state = loadState() || defaultState();
+    // Ensure sessionDate exists for older saved states
+    if (!this.state.sessionDate) {
+      this.state.sessionDate = new Date().toISOString().slice(0, 10);
+    }
     this.intervalId = null;
     this.roundRunning = false;
+
+    // Check for day rollover on load
+    this._checkDayRollover();
 
     // If the engine was "active" when the page closed, resume
     if (this.state.agentStatus === 'active') {
       this._startPolling();
     }
+  }
+
+  _getStrategy() {
+    try {
+      const key = localStorage.getItem(STRAT_KEY) || 'safe';
+      return STRATEGIES[key] || STRATEGIES.safe;
+    } catch { return STRATEGIES.safe; }
+  }
+
+  _getStrategyKey() {
+    try {
+      return localStorage.getItem(STRAT_KEY) || 'safe';
+    } catch { return 'safe'; }
   }
 
   getState() {
@@ -100,6 +124,24 @@ export class AgentEngine {
     return [...this.state.bets].reverse();
   }
 
+  getAllBetsWithHistory() {
+    const current = [...this.state.bets];
+    const currentIds = new Set(current.map(b => b.id));
+    const history = this.getDailyHistory();
+    const historical = history.flatMap(d => (d.trades || []).filter(b => !currentIds.has(b.id)));
+    const combined = [...current, ...historical];
+    combined.sort((a, b) => new Date(b.round_time).getTime() - new Date(a.round_time).getTime());
+    return combined;
+  }
+
+  getDailyHistory() {
+    try {
+      const raw = localStorage.getItem(DAILY_HISTORY_KEY);
+      if (raw) return JSON.parse(raw);
+    } catch {}
+    return [];
+  }
+
   getActivityLog() {
     return [...this.state.activityLog].slice(-50).reverse();
   }
@@ -127,6 +169,7 @@ export class AgentEngine {
 
   start() {
     if (this.state.bankroll <= 0) return;
+    this._checkDayRollover();
     this.state.agentStatus = 'active';
     this.state.stopReason = null;
     if (this.state.dailyStartBankroll === 0) {
@@ -164,6 +207,63 @@ export class AgentEngine {
     this._stopPolling();
     this.state = defaultState();
     this._persist();
+  }
+
+  // --------------- Daily History ---------------
+
+  _checkDayRollover() {
+    const today = new Date().toISOString().slice(0, 10);
+    if (!this.state.sessionDate) {
+      this.state.sessionDate = today;
+      return;
+    }
+    if (this.state.sessionDate !== today) {
+      // Archive previous day's trades
+      this._archiveDay(this.state.sessionDate);
+      // Start fresh session — bankroll carries over
+      this.state.bets = [];
+      this.state.activityLog = [];
+      this.state.consecutiveWins = 0;
+      this.state.consecutiveLosses = 0;
+      this.state.dailyStartBankroll = this.state.bankroll;
+      this.state.sessionDate = today;
+      this.state.pendingBet = null;
+      this.state.stopReason = null;
+      if (this.state.agentStatus === 'stopped') {
+        this.state.agentStatus = 'idle';
+      }
+      this._log('START', `New trading day: ${today} — bankroll carried over: $${this.state.bankroll.toFixed(2)}`);
+      this._persist();
+    }
+  }
+
+  _archiveDay(date) {
+    const resolved = this.state.bets.filter(b => b.result === 'WIN' || b.result === 'LOSS');
+    if (resolved.length === 0 && this.state.bets.length === 0) return;
+
+    const totalPnl = resolved.reduce((s, b) => s + (b.pnl || 0), 0);
+    const wins = resolved.filter(b => b.result === 'WIN').length;
+    const winRate = resolved.length > 0 ? (wins / resolved.length) * 100 : 0;
+
+    const dayRecord = {
+      date,
+      trades: [...this.state.bets],
+      summary: {
+        totalPnl,
+        winRate,
+        totalBets: resolved.length,
+        startBankroll: this.state.dailyStartBankroll,
+        endBankroll: this.state.bankroll,
+      },
+    };
+
+    try {
+      const history = JSON.parse(localStorage.getItem(DAILY_HISTORY_KEY) || '[]');
+      const existing = history.findIndex(h => h.date === date);
+      if (existing >= 0) history[existing] = dayRecord;
+      else history.push(dayRecord);
+      localStorage.setItem(DAILY_HISTORY_KEY, JSON.stringify(history));
+    } catch {}
   }
 
   // --------------- Internal ---------------
@@ -209,6 +309,11 @@ export class AgentEngine {
     this.roundRunning = true;
 
     try {
+      // Check for day rollover
+      this._checkDayRollover();
+
+      const strat = this._getStrategy();
+
       // Check stop conditions first
       const stopCheck = this._shouldStop();
       if (stopCheck.stop) {
@@ -216,6 +321,7 @@ export class AgentEngine {
         this.state.agentStatus = 'stopped';
         this.state.stopReason = stopCheck.reason;
         this._log('AUTO_STOP', `Agent stopped: ${this._reasonLabel(stopCheck.reason)}`);
+        this._archiveDay(this.state.sessionDate);
         this._persist();
         return;
       }
@@ -228,8 +334,8 @@ export class AgentEngine {
 
       this._log('SIGNAL', `${signals.direction} (${signals.confidence.toFixed(1)}% confidence) — ${signals.reasoning}`);
 
-      // Check confidence
-      if (signals.confidence < CONFIDENCE_THRESHOLD) {
+      // Check confidence against strategy threshold
+      if (signals.confidence < strat.confThresh) {
         const bet = {
           id: Date.now(),
           round_time: new Date().toISOString(),
@@ -244,14 +350,13 @@ export class AgentEngine {
           reasoning: signals.reasoning,
         };
         this.state.bets.push(bet);
-        this._log('SKIP', `Skipped — confidence ${signals.confidence.toFixed(1)}% < ${CONFIDENCE_THRESHOLD}% threshold`);
+        this._log('SKIP', `Skipped — confidence ${signals.confidence.toFixed(1)}% < ${strat.confThresh}% threshold`);
         this._persist();
         return;
       }
 
-      // Calculate bet size
-      const betPercent = this.state.consecutiveWins >= 3 ? BET_PERCENT_STREAK : BET_PERCENT;
-      const betAmount = parseFloat((this.state.bankroll * betPercent).toFixed(2));
+      // Calculate bet size using strategy
+      const betAmount = parseFloat((this.state.bankroll * strat.betPct).toFixed(2));
 
       if (betAmount < 0.01) {
         this._log('SKIP', 'Bankroll too low for minimum bet');
@@ -327,6 +432,7 @@ export class AgentEngine {
         this.state.agentStatus = 'stopped';
         this.state.stopReason = postCheck.reason;
         this._log('AUTO_STOP', `Agent stopped: ${this._reasonLabel(postCheck.reason)}`);
+        this._archiveDay(this.state.sessionDate);
         this._persist();
       }
     } catch (err) {
@@ -338,14 +444,15 @@ export class AgentEngine {
   }
 
   _shouldStop() {
+    const strat = this._getStrategy();
     const resolved = this.state.bets.filter(b => b.result === 'WIN' || b.result === 'LOSS');
     const totalPnl = resolved.reduce((sum, b) => sum + (b.pnl || 0), 0);
 
     if (this.state.dailyStartBankroll > 0) {
-      if (totalPnl <= this.state.dailyStartBankroll * LOSS_LIMIT) {
+      if (totalPnl <= this.state.dailyStartBankroll * strat.lossLimit) {
         return { stop: true, reason: 'DAILY_LOSS_LIMIT' };
       }
-      if (totalPnl >= this.state.dailyStartBankroll * PROFIT_TARGET) {
+      if (totalPnl >= this.state.dailyStartBankroll * strat.profitTarget) {
         return { stop: true, reason: 'DAILY_PROFIT_TARGET' };
       }
     }
@@ -356,9 +463,10 @@ export class AgentEngine {
   }
 
   _reasonLabel(reason) {
+    const strat = this._getStrategy();
     const labels = {
-      DAILY_LOSS_LIMIT: 'Hit -10% daily loss limit',
-      DAILY_PROFIT_TARGET: 'Hit +5% profit target',
+      DAILY_LOSS_LIMIT: `Hit ${(strat.lossLimit * 100).toFixed(0)}% daily loss limit`,
+      DAILY_PROFIT_TARGET: `Hit +${(strat.profitTarget * 100).toFixed(0)}% profit target`,
       CONSECUTIVE_LOSSES: '4 consecutive losses',
       USER_STOPPED: 'Stopped by user',
       WITHDRAWN: 'Funds withdrawn',

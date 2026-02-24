@@ -300,6 +300,15 @@ body {
   transition: width 0.5s ease;
 }
 
+/* ─── Wallet connect button glow ─── */
+@keyframes wallet-glow {
+  0%, 100% { box-shadow: 0 0 10px rgba(0,255,136,0.4), 0 0 25px rgba(0,255,136,0.2), inset 0 0 8px rgba(0,255,136,0.1); }
+  50% { box-shadow: 0 0 20px rgba(0,255,136,0.6), 0 0 45px rgba(0,255,136,0.3), 0 0 70px rgba(0,255,136,0.15), inset 0 0 15px rgba(0,255,136,0.15); }
+}
+.wallet-btn-glow {
+  animation: wallet-glow 2s ease-in-out infinite;
+}
+
 /* ─── Keyboard hint ─── */
 .kbd {
   display: inline-flex;
