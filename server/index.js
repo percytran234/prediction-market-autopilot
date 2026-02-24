@@ -6,6 +6,7 @@ import walletRoutes from './routes/walletRoutes.js';
 import agentRoutes from './routes/agentRoutes.js';
 import dashboardRoutes from './routes/dashboardRoutes.js';
 import signalRoutes from './routes/signalRoutes.js';
+import backtestRoutes from './routes/backtest.js';
 
 const app = express();
 
@@ -25,6 +26,7 @@ app.use(walletRoutes);
 app.use(agentRoutes);
 app.use(dashboardRoutes);
 app.use(signalRoutes);
+app.use(backtestRoutes);
 
 // Catch-all error handler — always return JSON
 app.use((err, req, res, _next) => {
