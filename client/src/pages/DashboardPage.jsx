@@ -16,7 +16,7 @@ function formatTime(ts) {
 
 const STRATEGIES = {
   safe:       { label:'Safe',       betPct:2, lossLimit:10, profitTarget:5,  confThresh:65, color:'text-accent-green',  border:'border-accent-green/30',  bg:'bg-accent-green/10'  },
-  balanced:   { label:'Balanced',   betPct:3, lossLimit:15, profitTarget:8,  confThresh:60, color:'text-accent-orange', border:'border-accent-orange/30', bg:'bg-accent-orange/10' },
+  balanced:   { label:'Balanced',   betPct:3, lossLimit:15, profitTarget:8,  confThresh:60, color:'text-[#69f0ae]',     border:'border-[#69f0ae]/30',     bg:'bg-[#69f0ae]/10'     },
   aggressive: { label:'Aggressive', betPct:5, lossLimit:20, profitTarget:12, confThresh:55, color:'text-accent-red',    border:'border-accent-red/30',    bg:'bg-accent-red/10'    },
 };
 const STRAT_KEY = 'prediction_agent_strategy';
@@ -43,11 +43,11 @@ function Sparkline({ data, color }) {
 function RiskMeter({ value }) {
   const circ = Math.PI * 40;
   const offset = circ - (value / 100) * circ;
-  const color = value < 30 ? '#00ff88' : value < 60 ? '#ff6600' : '#ff3333';
+  const color = value < 30 ? '#00e676' : value < 60 ? '#ffab00' : '#ff1744';
   return (
     <div className="flex flex-col items-center">
       <svg viewBox="0 0 100 60" className="w-full max-w-[130px]">
-        <path d="M 10 55 A 40 40 0 0 1 90 55" fill="none" stroke="#1e1e2e" strokeWidth="8" strokeLinecap="round"/>
+        <path d="M 10 55 A 40 40 0 0 1 90 55" fill="none" stroke="#1e3320" strokeWidth="8" strokeLinecap="round"/>
         <path d="M 10 55 A 40 40 0 0 1 90 55" fill="none" stroke={color} strokeWidth="8" strokeLinecap="round"
           strokeDasharray={circ} strokeDashoffset={offset} style={{filter:`drop-shadow(0 0 6px ${color})`}}/>
         <text x="50" y="50" textAnchor="middle" fill={color} fontSize="15" fontFamily="JetBrains Mono,monospace" fontWeight="700">{value}</text>
@@ -66,7 +66,7 @@ function StatCard({ label, value, sub, color, glow, blink, sparkData, sparkColor
           <p className={`text-xl font-bold font-mono ${color||'text-dark-text'} ${glow||''} ${blink?'animate-blink':''}`}>{value}</p>
           {sub && <p className={`text-[10px] mt-0.5 font-mono ${color||'text-dark-muted'}`}>{sub}</p>}
         </div>
-        {sparkData && <Sparkline data={sparkData} color={sparkColor||'#ff6600'}/>}
+        {sparkData && <Sparkline data={sparkData} color={sparkColor||'#00e676'}/>}
       </div>
     </div>
   );
@@ -87,8 +87,8 @@ function CountdownTimer({ isActive, intervalMs=60000 }) {
   if (!isActive) return null;
   return (
     <span className="text-[11px] font-mono text-dark-muted flex items-center gap-1.5">
-      <span className="w-1.5 h-1.5 rounded-full bg-accent-orange animate-pulse"/>
-      Next bet in: <span className="text-accent-orange font-bold">{secs}s</span>
+      <span className="w-1.5 h-1.5 rounded-full bg-accent-green animate-pulse"/>
+      Next bet in: <span className="text-accent-green font-bold">{secs}s</span>
     </span>
   );
 }
@@ -104,14 +104,14 @@ function SessionTimer({ isActive }) {
   }, [isActive]);
   const h = Math.floor(elapsed/3600), m = Math.floor((elapsed%3600)/60), s = elapsed%60;
   const str = h > 0 ? `${h}h ${String(m).padStart(2,'0')}m` : `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
-  return <span className="font-mono text-accent-orange">{isActive ? str : '—'}</span>;
+  return <span className="font-mono text-accent-green">{isActive ? str : '—'}</span>;
 }
 
 function PriceTooltip({ active, payload }) {
   if (!active || !payload?.[0]) return null;
   const d = payload[0].payload;
   return (
-    <div className="terminal-card px-3 py-2 text-xs shadow-lg">
+    <div className="terminal-card px-3 py-2 text-xs shadow-lg" style={{backgroundColor:'#111a12',border:'1px solid #1e3320'}}>
       <p className="text-dark-muted mb-1">{formatTime(d.time)}</p>
       <p className="text-dark-text font-bold font-mono">${Number(d.price).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</p>
     </div>
@@ -121,7 +121,7 @@ function EquityTooltip({ active, payload }) {
   if (!active || !payload?.[0]) return null;
   const d = payload[0].payload;
   return (
-    <div className="terminal-card px-3 py-2 text-xs shadow-lg">
+    <div className="terminal-card px-3 py-2 text-xs shadow-lg" style={{backgroundColor:'#111a12',border:'1px solid #1e3320'}}>
       <p className="text-dark-muted mb-1">Trade #{d.idx}</p>
       <p className="text-dark-text font-bold font-mono">${fmt(d.equity)}</p>
     </div>
@@ -218,7 +218,7 @@ export default function DashboardPage({ engine, account, dashboard, bets, onConn
   const pMax = prices.length>0?Math.max(...prices):0;
   const pRange = pMax-pMin||1;
   const isUp = priceData.length>=2 && priceData[priceData.length-1].price>=priceData[0].price;
-  const chartColor = isUp?'#00ff88':'#ff3333';
+  const chartColor = isUp?'#00e676':'#ff1744';
   const displayPrice = livePrice||(priceData.length>0?priceData[priceData.length-1].price:null);
   const priceChange = priceData.length>=2 ? priceData[priceData.length-1].price-priceData[0].price : 0;
   const priceChangePct = priceData.length>=2&&priceData[0].price>0 ? (priceChange/priceData[0].price)*100 : 0;
@@ -242,22 +242,22 @@ export default function DashboardPage({ engine, account, dashboard, bets, onConn
   const typeCfg = {
     START:{c:'text-accent-green',i:'▶'}, STOP:{c:'text-accent-red',i:'■'},
     AUTO_STOP:{c:'text-accent-red',i:'⛔'}, SCAN:{c:'text-accent-blue',i:'◎'},
-    SIGNAL:{c:'text-accent-blue',i:'◈'}, BET:{c:'text-accent-orange',i:'◉'},
+    SIGNAL:{c:'text-accent-blue',i:'◈'}, BET:{c:'text-accent-green',i:'◉'},
     WIN:{c:'text-accent-green',i:'✓'}, LOSS:{c:'text-accent-red',i:'✗'},
     SKIP:{c:'text-dark-muted',i:'⏭'}, DEPOSIT:{c:'text-accent-blue',i:'▸'},
-    WITHDRAW:{c:'text-accent-orange',i:'◂'}, ERROR:{c:'text-accent-red',i:'⚠'},
+    WITHDRAW:{c:'text-accent-green',i:'◂'}, ERROR:{c:'text-accent-red',i:'⚠'},
   };
 
   return (
     <div className="space-y-4">
       {/* Wallet Gate Banner */}
       {!isWalletConnected && (
-        <div className="terminal-card border border-accent-orange/30 p-6 text-center">
+        <div className="terminal-card border border-accent-green/30 p-6 text-center">
           <div className="text-3xl mb-3">🔐</div>
           <h3 className="text-base font-bold text-dark-text mb-1">Connect Your Wallet to Trade</h3>
           <p className="text-xs text-dark-muted mb-4 font-mono">You must connect MetaMask to deposit, start, or withdraw funds.</p>
           <button onClick={onConnect} disabled={connecting}
-            className="px-8 py-3 bg-[#00ff88] text-[#0a0a0f] font-extrabold rounded-xl hover:brightness-110 transition disabled:opacity-50 font-mono text-base wallet-btn-glow border-2 border-[#00ff88]/60 tracking-wide">
+            className="px-8 py-3 bg-[#00e676] text-black font-extrabold rounded-xl hover:brightness-110 transition disabled:opacity-50 font-mono text-base wallet-btn-glow border-2 border-[#00e676]/60 tracking-wide">
             {connecting ? 'Connecting...' : 'Connect Wallet'}
           </button>
         </div>
@@ -277,19 +277,19 @@ export default function DashboardPage({ engine, account, dashboard, bets, onConn
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           {!isWalletConnected ? (
-            <span className="text-xs text-accent-orange font-mono px-3 py-1.5 border border-accent-orange/30 rounded-lg bg-accent-orange/5">
+            <span className="text-xs text-accent-green font-mono px-3 py-1.5 border border-accent-green/30 rounded-lg bg-accent-green/5">
               Connect wallet first
             </span>
           ) : !hasBalance && !isActive ? (
             <div className="flex items-center gap-2">
               <input type="number" value={depositAmount} onChange={e=>setDepositAmount(e.target.value)} placeholder="100"
-                className="w-24 px-3 py-1.5 bg-dark-bg border border-dark-border rounded-lg text-sm font-mono text-dark-text focus:outline-none focus:border-accent-orange"/>
+                className="w-24 px-3 py-1.5 bg-dark-bg border border-dark-border rounded-lg text-sm font-mono text-dark-text focus:outline-none focus:border-accent-green"/>
               <button onClick={handleDeposit}
-                className="px-4 py-1.5 bg-accent-orange text-dark-bg text-sm font-bold rounded-lg hover:brightness-110 transition">Deposit</button>
+                className="px-4 py-1.5 bg-accent-green text-black text-sm font-bold rounded-lg hover:brightness-110 transition">Deposit</button>
             </div>
           ) : isActive ? (
             <button onClick={() => engine.stop()}
-              className="px-4 py-1.5 bg-accent-red/10 text-accent-red text-sm font-bold rounded-lg border border-accent-red/30 hover:bg-accent-red/20 transition">Stop Agent</button>
+              className="px-4 py-1.5 bg-[#ff1744]/10 text-[#ff1744] text-sm font-bold rounded-lg border border-[#ff1744]/30 hover:bg-[#ff1744]/20 transition">Stop Agent</button>
           ) : (
             <>
               <button onClick={() => engine.start()} disabled={!hasBalance}
@@ -298,7 +298,7 @@ export default function DashboardPage({ engine, account, dashboard, bets, onConn
                 className="px-4 py-1.5 text-accent-blue text-sm font-medium rounded-lg border border-accent-blue/30 hover:bg-accent-blue/10 transition disabled:opacity-40">Withdraw</button>
               <div className="flex items-center gap-1">
                 <input type="number" value={depositAmount} onChange={e=>setDepositAmount(e.target.value)}
-                  className="w-20 px-2 py-1.5 bg-dark-bg border border-dark-border rounded-lg text-sm font-mono text-dark-text focus:outline-none focus:border-accent-orange"/>
+                  className="w-20 px-2 py-1.5 bg-dark-bg border border-dark-border rounded-lg text-sm font-mono text-dark-text focus:outline-none focus:border-accent-green"/>
                 <button onClick={handleDeposit}
                   className="px-3 py-1.5 text-xs text-dark-muted border border-dark-border rounded-lg hover:bg-dark-hover transition">+Deposit</button>
               </div>
@@ -325,7 +325,7 @@ export default function DashboardPage({ engine, account, dashboard, bets, onConn
             <span>Bet: <span className="text-dark-text">{strat.betPct}%</span></span>
             <span>Loss limit: <span className="text-accent-red">-{strat.lossLimit}%</span></span>
             <span>Profit target: <span className="text-accent-green">+{strat.profitTarget}%</span></span>
-            <span>Min conf: <span className="text-accent-orange">{strat.confThresh}%</span></span>
+            <span>Min conf: <span className="text-accent-green">{strat.confThresh}%</span></span>
           </div>
         </div>
       </div>
@@ -334,16 +334,16 @@ export default function DashboardPage({ engine, account, dashboard, bets, onConn
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <StatCard label="Bankroll" value={`$${fmt(dashboard?.bankroll)}`}
           color="text-dark-text" glow={isActive?'animate-neon-pulse':'neon-green'} blink={isActive}
-          sparkData={bankrollSpark} sparkColor="#ff6600"/>
+          sparkData={bankrollSpark} sparkColor="#00e676"/>
         <StatCard label="Total P&L" value={fmtPnl(dashboard?.pnl)}
           sub={`${(dashboard?.pnl||0)>=0?'+':''}${fmt(dashboard?.pnlPercent)}%`}
           color={(dashboard?.pnl||0)>=0?'text-accent-green':'text-accent-red'}
           glow={(dashboard?.pnl||0)>=0?'neon-green':'neon-red'}
-          sparkData={pnlSpark} sparkColor={(dashboard?.pnl||0)>=0?'#00ff88':'#ff3333'}/>
+          sparkData={pnlSpark} sparkColor={(dashboard?.pnl||0)>=0?'#00e676':'#ff1744'}/>
         <StatCard label="Win Rate" value={`${fmt(dashboard?.winRate,1)}%`}
           sub={`${wins}W / ${losses}L`}
           color={(dashboard?.winRate||0)>=50?'text-accent-green':'text-accent-red'}
-          sparkData={winRateSpark} sparkColor={(dashboard?.winRate||0)>=50?'#00ff88':'#ff3333'}/>
+          sparkData={winRateSpark} sparkColor={(dashboard?.winRate||0)>=50?'#00e676':'#ff1744'}/>
         <StatCard label="Sharpe Ratio" value={fmt(sharpe,2)} sub="Annualized"
           color={sharpe>0?'text-accent-green':sharpe<0?'text-accent-red':'text-dark-muted'}/>
       </div>
@@ -393,11 +393,11 @@ export default function DashboardPage({ engine, account, dashboard, bets, onConn
 
       {/* Pending Bet */}
       {pendingBet && (
-        <div className="terminal-card border border-accent-orange/30 p-4 relative overflow-hidden">
-          <div className="absolute inset-0 border border-accent-orange/20 rounded-xl animate-pulse-glow pointer-events-none"/>
+        <div className="terminal-card border border-accent-green/30 p-4 relative overflow-hidden">
+          <div className="absolute inset-0 border border-accent-green/20 rounded-xl animate-pulse-glow pointer-events-none"/>
           <div className="flex items-center gap-3 mb-3">
-            <div className="w-2 h-2 rounded-full bg-accent-orange animate-pulse"/>
-            <span className="text-sm font-medium text-accent-orange font-mono">ROUND IN PROGRESS</span>
+            <div className="w-2 h-2 rounded-full bg-accent-green animate-pulse"/>
+            <span className="text-sm font-medium text-accent-green font-mono">ROUND IN PROGRESS</span>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             <div>
@@ -412,7 +412,7 @@ export default function DashboardPage({ engine, account, dashboard, bets, onConn
             </div>
             <div>
               <p className="text-[10px] text-dark-muted mb-1 uppercase">Confidence</p>
-              <p className="font-bold font-mono neon-orange">{fmt(pendingBet.confidence,1)}%</p>
+              <p className="font-bold font-mono neon-green">{fmt(pendingBet.confidence,1)}%</p>
             </div>
             <div>
               <p className="text-[10px] text-dark-muted mb-1 uppercase">BTC Entry</p>
@@ -428,7 +428,7 @@ export default function DashboardPage({ engine, account, dashboard, bets, onConn
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <h3 className="text-xs font-semibold text-dark-muted uppercase tracking-wider">BTC/USDT</h3>
-              <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-accent-orange/10 text-accent-orange border border-accent-orange/20 font-mono animate-blink">LIVE</span>
+              <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-accent-green/10 text-accent-green border border-accent-green/20 font-mono animate-blink">LIVE</span>
             </div>
             {displayPrice && (
               <div className="text-right">
@@ -457,10 +457,10 @@ export default function DashboardPage({ engine, account, dashboard, bets, onConn
                     <stop offset="100%" stopColor={chartColor} stopOpacity={0}/>
                   </linearGradient>
                 </defs>
-                <XAxis dataKey="time" tickFormatter={formatTime} tick={{fontSize:9,fill:'#6b7280',fontFamily:'JetBrains Mono'}} axisLine={false} tickLine={false} minTickGap={40}/>
-                <YAxis domain={[pMin-pRange*0.1,pMax+pRange*0.1]} tick={{fontSize:9,fill:'#6b7280',fontFamily:'JetBrains Mono'}} axisLine={false} tickLine={false} tickFormatter={v=>`$${(v/1000).toFixed(1)}k`} width={48}/>
+                <XAxis dataKey="time" tickFormatter={formatTime} tick={{fontSize:9,fill:'#4a7a4e',fontFamily:'JetBrains Mono'}} axisLine={false} tickLine={false} minTickGap={40}/>
+                <YAxis domain={[pMin-pRange*0.1,pMax+pRange*0.1]} tick={{fontSize:9,fill:'#4a7a4e',fontFamily:'JetBrains Mono'}} axisLine={false} tickLine={false} tickFormatter={v=>`$${(v/1000).toFixed(1)}k`} width={48}/>
                 <Tooltip content={<PriceTooltip/>}/>
-                <Area type="monotone" dataKey="price" stroke={chartColor} strokeWidth={1.5} fill="url(#priceGrad)" dot={false} activeDot={{r:3,fill:chartColor,stroke:'#111118',strokeWidth:2}}/>
+                <Area type="monotone" dataKey="price" stroke={chartColor} strokeWidth={1.5} fill="url(#priceGrad)" dot={false} activeDot={{r:3,fill:chartColor,stroke:'#111a12',strokeWidth:2}}/>
               </AreaChart>
             </ResponsiveContainer>
           )}
@@ -472,10 +472,10 @@ export default function DashboardPage({ engine, account, dashboard, bets, onConn
           ) : (
             <ResponsiveContainer width="100%" height={200}>
               <LineChart data={equityCurve} margin={{top:4,right:4,bottom:0,left:4}}>
-                <XAxis dataKey="idx" tick={{fontSize:9,fill:'#6b7280',fontFamily:'JetBrains Mono'}} axisLine={false} tickLine={false}/>
-                <YAxis tick={{fontSize:9,fill:'#6b7280',fontFamily:'JetBrains Mono'}} axisLine={false} tickLine={false} tickFormatter={v=>`$${v.toFixed(0)}`} width={48}/>
+                <XAxis dataKey="idx" tick={{fontSize:9,fill:'#4a7a4e',fontFamily:'JetBrains Mono'}} axisLine={false} tickLine={false}/>
+                <YAxis tick={{fontSize:9,fill:'#4a7a4e',fontFamily:'JetBrains Mono'}} axisLine={false} tickLine={false} tickFormatter={v=>`$${v.toFixed(0)}`} width={48}/>
                 <Tooltip content={<EquityTooltip/>}/>
-                <Line type="monotone" dataKey="equity" stroke="#ff6600" strokeWidth={2} dot={false} activeDot={{r:3,fill:'#ff6600',stroke:'#111118',strokeWidth:2}}/>
+                <Line type="monotone" dataKey="equity" stroke="#00e676" strokeWidth={2} dot={false} activeDot={{r:3,fill:'#00e676',stroke:'#111a12',strokeWidth:2}}/>
               </LineChart>
             </ResponsiveContainer>
           )}
@@ -519,7 +519,7 @@ export default function DashboardPage({ engine, account, dashboard, bets, onConn
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-[11px] text-dark-muted">Address</span>
-              <span className="text-[11px] font-mono">{account ? <span className="text-dark-text">{account.slice(0,6)}...{account.slice(-4)}</span> : <span className="text-accent-orange">Not connected</span>}</span>
+              <span className="text-[11px] font-mono">{account ? <span className="text-dark-text">{account.slice(0,6)}...{account.slice(-4)}</span> : <span className="text-accent-green">Not connected</span>}</span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-[11px] text-dark-muted">Status</span>

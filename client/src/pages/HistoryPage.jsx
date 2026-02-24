@@ -181,7 +181,7 @@ export default function HistoryPage({ bets, engine }) {
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-bold text-dark-text">Trade History</h2>
         <button onClick={exportCSV}
-          className="px-4 py-1.5 text-xs font-bold text-accent-orange border border-accent-orange/30 rounded-lg hover:bg-accent-orange/10 transition font-mono">
+          className="px-4 py-1.5 text-xs font-bold text-accent-green border border-accent-green/30 rounded-lg hover:bg-accent-green/10 transition font-mono">
           Export CSV
         </button>
       </div>
@@ -194,14 +194,14 @@ export default function HistoryPage({ bets, engine }) {
             <LineChart data={cumPnlData} margin={{top:4,right:4,bottom:0,left:4}}>
               <defs>
                 <linearGradient id="pnlLineGrad" x1="0" y1="0" x2="1" y2="0">
-                  <stop offset="0%" stopColor="#ff6600"/>
-                  <stop offset="100%" stopColor={totalPnl>=0?'#00ff88':'#ff3333'}/>
+                  <stop offset="0%" stopColor="#00e676"/>
+                  <stop offset="100%" stopColor={totalPnl>=0?'#00e676':'#ff1744'}/>
                 </linearGradient>
               </defs>
-              <XAxis dataKey="idx" tick={{fontSize:9,fill:'#6b7280',fontFamily:'JetBrains Mono'}} axisLine={false} tickLine={false}/>
-              <YAxis tick={{fontSize:9,fill:'#6b7280',fontFamily:'JetBrains Mono'}} axisLine={false} tickLine={false} tickFormatter={v=>`$${v.toFixed(0)}`} width={46}/>
+              <XAxis dataKey="idx" tick={{fontSize:9,fill:'#4a7a4e',fontFamily:'JetBrains Mono'}} axisLine={false} tickLine={false}/>
+              <YAxis tick={{fontSize:9,fill:'#4a7a4e',fontFamily:'JetBrains Mono'}} axisLine={false} tickLine={false} tickFormatter={v=>`$${v.toFixed(0)}`} width={46}/>
               <Tooltip content={<PnlTooltip/>}/>
-              <Line type="monotone" dataKey="cumPnl" stroke={totalPnl>=0?'#00ff88':'#ff3333'} strokeWidth={2} dot={false} activeDot={{r:3,fill:totalPnl>=0?'#00ff88':'#ff3333',stroke:'#111118',strokeWidth:2}}/>
+              <Line type="monotone" dataKey="cumPnl" stroke={totalPnl>=0?'#00e676':'#ff1744'} strokeWidth={2} dot={false} activeDot={{r:3,fill:totalPnl>=0?'#00e676':'#ff1744',stroke:'#111a12',strokeWidth:2}}/>
             </LineChart>
           </ResponsiveContainer>
         </div>
@@ -218,7 +218,7 @@ export default function HistoryPage({ bets, engine }) {
                   ? f==='WIN'  ? 'bg-accent-green/15 text-accent-green border border-accent-green/30'
                   : f==='LOSS' ? 'bg-accent-red/15 text-accent-red border border-accent-red/30'
                   : f==='SKIP' ? 'bg-dark-border text-dark-muted border border-dark-border'
-                  : 'bg-accent-orange/15 text-accent-orange border border-accent-orange/30'
+                  : 'bg-accent-green/15 text-accent-green border border-accent-green/30'
                   : 'text-dark-muted border border-dark-border hover:bg-dark-hover'
               }`}>{f}</button>
           ))}
@@ -226,10 +226,10 @@ export default function HistoryPage({ bets, engine }) {
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-[10px] text-dark-muted uppercase tracking-wider font-semibold">Date:</span>
           <input type="date" value={dateFrom} onChange={e=>{setDateFrom(e.target.value);setPage(0);}}
-            className="px-2 py-1 bg-dark-bg border border-dark-border rounded text-[11px] font-mono text-dark-text focus:outline-none focus:border-accent-orange"/>
+            className="px-2 py-1 bg-dark-bg border border-dark-border rounded text-[11px] font-mono text-dark-text focus:outline-none focus:border-accent-green"/>
           <span className="text-dark-muted text-xs">to</span>
           <input type="date" value={dateTo} onChange={e=>{setDateTo(e.target.value);setPage(0);}}
-            className="px-2 py-1 bg-dark-bg border border-dark-border rounded text-[11px] font-mono text-dark-text focus:outline-none focus:border-accent-orange"/>
+            className="px-2 py-1 bg-dark-bg border border-dark-border rounded text-[11px] font-mono text-dark-text focus:outline-none focus:border-accent-green"/>
         </div>
       </div>
 
@@ -257,7 +257,7 @@ export default function HistoryPage({ bets, engine }) {
             <div className="overflow-x-auto">
               <table className="w-full trade-table">
                 <thead>
-                  <tr className="border-b border-dark-border">
+                  <tr className="border-b border-dark-border bg-[#0d1410]">
                     <th className="text-left">Timestamp</th>
                     <th className="text-center">Dir</th>
                     <th className="text-right">Conf</th>
@@ -280,15 +280,15 @@ export default function HistoryPage({ bets, engine }) {
 
                     const isWin = bet.result==='WIN', isLoss = bet.result==='LOSS';
                     const isPending = bet.result==='PENDING', isSkip = bet.result==='SKIP';
-                    const rowBg = isWin ? 'bg-accent-green/[0.04]' : isLoss ? 'bg-accent-red/[0.04]' : '';
+                    const rowBg = isWin ? 'bg-[#0a2a0a]' : isLoss ? 'bg-[#2a0a0a]' : '';
                     return (
                       <React.Fragment key={bet.id}>
                         {showHeader && (
-                          <tr className="bg-dark-bg/80 border-b border-accent-orange/20">
+                          <tr className="bg-dark-bg/80 border-b border-accent-green/20">
                             <td colSpan={9} className="px-4 py-2.5">
                               <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-2">
-                                  <span className="text-[10px] text-accent-orange">&#9632;</span>
+                                  <span className="text-[10px] text-accent-green">&#9632;</span>
                                   <span className="text-xs font-bold text-dark-text font-mono">
                                     {betDate === today ? `Today (${betDate})` : betDate}
                                   </span>
@@ -323,7 +323,7 @@ export default function HistoryPage({ bets, engine }) {
                             <span className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded-full ${
                               isWin?'bg-accent-green/15 text-accent-green'
                               :isLoss?'bg-accent-red/15 text-accent-red'
-                              :isPending?'bg-accent-blue/15 text-accent-blue'
+                              :isPending?'bg-accent-yellow/15 text-accent-yellow'
                               :'bg-dark-border text-dark-muted'}`}>{bet.result}</span>
                           </td>
                           <td className={`text-right font-bold ${(bet.pnl||0)>0?'text-accent-green':(bet.pnl||0)<0?'text-accent-red':'text-dark-muted'}`}>
@@ -348,7 +348,7 @@ export default function HistoryPage({ bets, engine }) {
                   <button key={i} onClick={fn} disabled={currentPage===0}
                     className="px-2 py-1 text-[11px] text-dark-muted border border-dark-border rounded hover:bg-dark-hover transition disabled:opacity-30 font-mono">{lbl}</button>
                 ))}
-                <span className="px-3 py-1 text-[11px] font-mono text-accent-orange">{currentPage+1}/{totalPages}</span>
+                <span className="px-3 py-1 text-[11px] font-mono text-accent-green">{currentPage+1}/{totalPages}</span>
                 {[['›',()=>setPage(p=>Math.min(totalPages-1,p+1))],['»',()=>setPage(totalPages-1)]].map(([lbl,fn],i)=>(
                   <button key={i} onClick={fn} disabled={currentPage>=totalPages-1}
                     className="px-2 py-1 text-[11px] text-dark-muted border border-dark-border rounded hover:bg-dark-hover transition disabled:opacity-30 font-mono">{lbl}</button>
