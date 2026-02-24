@@ -136,6 +136,14 @@ db.exec(`
     is_paused BOOLEAN DEFAULT 0,
     pause_until DATETIME
   );
+
+  CREATE TABLE IF NOT EXISTS backtests (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    cache_key TEXT UNIQUE NOT NULL,
+    params TEXT NOT NULL,
+    results TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
 `);
 
 export function getDb() {
