@@ -1,3 +1,5 @@
+> 🌐 **[Landing Page](https://prediction-agent-landing.vercel.app)** | 💻 **[View Code](https://github.com/percytran234/prediction-market-autopilot)** | 📄 **[Read Spec](#spec--prediction-market-auto-pilot-agent)**
+
 [spec-en-v3.md](https://github.com/user-attachments/files/25475478/spec-en-v3.md)
 # SPEC — Prediction Market Auto-Pilot Agent
 
