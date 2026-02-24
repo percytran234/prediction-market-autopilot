@@ -1,5 +1,7 @@
 import express from 'express';
 import cors from 'cors';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { config } from './config.js';
 import { getDb } from './db/database.js';
 import walletRoutes from './routes/walletRoutes.js';
@@ -8,6 +10,7 @@ import dashboardRoutes from './routes/dashboardRoutes.js';
 import signalRoutes from './routes/signalRoutes.js';
 import backtestRoutes from './routes/backtest.js';
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 
 app.use(cors());
@@ -27,6 +30,15 @@ app.use(agentRoutes);
 app.use(dashboardRoutes);
 app.use(signalRoutes);
 app.use(backtestRoutes);
+
+// Serve static frontend files from dist/
+const distPath = path.join(__dirname, '..', 'dist');
+app.use(express.static(distPath));
+
+// SPA fallback — serve index.html for non-API routes
+app.get('*', (req, res) => {
+  res.sendFile(path.join(distPath, 'index.html'));
+});
 
 // Catch-all error handler — always return JSON
 app.use((err, req, res, _next) => {
