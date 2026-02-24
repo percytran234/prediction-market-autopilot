@@ -73,9 +73,11 @@ function AppInner() {
     if (prevStatusRef.current && curStatus !== prevStatusRef.current) {
       if (curStatus === 'active') addToast('Agent started', 'info');
       else if (curStatus === 'stopped') {
-        if (dashboard.stopReason === 'DAILY_LOSS_LIMIT') addToast('Daily loss limit reached (-10%)', 'warning');
+        const sk = (() => { try { return localStorage.getItem('prediction_agent_strategy') || 'safe'; } catch { return 'safe'; } })();
+        const sp = { safe:{ll:10,pt:5}, balanced:{ll:15,pt:8}, aggressive:{ll:20,pt:12} }[sk] || {ll:10,pt:5};
+        if (dashboard.stopReason === 'DAILY_LOSS_LIMIT') addToast(`Daily loss limit reached (-${sp.ll}%)`, 'warning');
         else if (dashboard.stopReason === 'CONSECUTIVE_LOSSES') addToast('4 consecutive losses — paused', 'warning');
-        else if (dashboard.stopReason === 'DAILY_PROFIT_TARGET') addToast('Profit target reached (+5%)', 'win');
+        else if (dashboard.stopReason === 'DAILY_PROFIT_TARGET') addToast(`Profit target reached (+${sp.pt}%)`, 'win');
         else addToast('Agent stopped', 'info');
       } else if (curStatus === 'withdrawn') addToast('Funds withdrawn', 'info');
     }
@@ -208,7 +210,7 @@ function AppInner() {
               </div>
             ) : (
               <button onClick={connectWallet} disabled={connecting}
-                className="px-4 py-1.5 bg-accent-orange text-dark-bg text-xs font-bold rounded-lg hover:brightness-110 transition disabled:opacity-50 font-mono">
+                className="px-6 py-2.5 bg-[#00ff88] text-[#0a0a0f] text-sm font-extrabold rounded-xl hover:brightness-110 transition disabled:opacity-50 font-mono wallet-btn-glow border-2 border-[#00ff88]/60 tracking-wide">
                 {connecting ? 'Connecting...' : 'Connect Wallet'}
               </button>
             )}
@@ -223,7 +225,7 @@ function AppInner() {
                 <DashboardPage engine={engine} account={account} dashboard={dashboard} bets={bets} onConnect={connectWallet} connecting={connecting} />
               } />
               <Route path="/history" element={
-                <HistoryPage bets={bets} />
+                <HistoryPage bets={bets} engine={engine} />
               } />
               <Route path="/analytics" element={
                 <AnalyticsPage bets={bets} />

@@ -257,7 +257,7 @@ export default function DashboardPage({ engine, account, dashboard, bets, onConn
           <h3 className="text-base font-bold text-dark-text mb-1">Connect Your Wallet to Trade</h3>
           <p className="text-xs text-dark-muted mb-4 font-mono">You must connect MetaMask to deposit, start, or withdraw funds.</p>
           <button onClick={onConnect} disabled={connecting}
-            className="px-6 py-2 bg-accent-orange text-dark-bg font-bold rounded-lg hover:brightness-110 transition disabled:opacity-50 font-mono text-sm">
+            className="px-8 py-3 bg-[#00ff88] text-[#0a0a0f] font-extrabold rounded-xl hover:brightness-110 transition disabled:opacity-50 font-mono text-base wallet-btn-glow border-2 border-[#00ff88]/60 tracking-wide">
             {connecting ? 'Connecting...' : 'Connect Wallet'}
           </button>
         </div>
