@@ -95,18 +95,27 @@ export default function BacktestPage() {
   const [showAllBets, setShowAllBets] = useState(false);
   const [compareLoading, setCompareLoading] = useState(false);
 
+  async function callBacktestApi(body) {
+    const res = await fetch('/api/backtest', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const contentType = res.headers.get('content-type') || '';
+    if (!contentType.includes('application/json')) {
+      throw new Error('Backend server is not reachable. Please ensure the server is running.');
+    }
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Backtest failed');
+    return data;
+  }
+
   async function runBacktest() {
     setLoading(true);
     setError(null);
     setResults(null);
     try {
-      const res = await fetch('/api/backtest', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ market, days, betPercent, skipThreshold, stopLoss, takeProfit, startingBankroll }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Backtest failed');
+      const data = await callBacktestApi({ market, days, betPercent, skipThreshold, stopLoss, takeProfit, startingBankroll });
       setResults(data);
     } catch (err) {
       setError(err.message);
@@ -117,13 +126,7 @@ export default function BacktestPage() {
   async function runComparison() {
     setCompareLoading(true);
     try {
-      const res = await fetch('/api/backtest', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ market, days, betPercent, skipThreshold, stopLoss, takeProfit, startingBankroll, compareRandom: true }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Comparison failed');
+      const data = await callBacktestApi({ market, days, betPercent, skipThreshold, stopLoss, takeProfit, startingBankroll, compareRandom: true });
       setResults(data);
     } catch (err) {
       setError(err.message);
