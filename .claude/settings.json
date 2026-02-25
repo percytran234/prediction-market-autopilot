@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd /home/user/testwebsite && (lsof -ti:3001 >/dev/null 2>&1 || (npm run dev > /tmp/dev-server.log 2>&1 &)) && sleep 3 && echo 'Dev server ready'"
+          }
+        ]
+      }
+    ]
+  }
+}
