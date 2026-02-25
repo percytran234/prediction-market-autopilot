@@ -9,6 +9,7 @@ import HistoryPage from './pages/HistoryPage.jsx';
 import AnalyticsPage from './pages/AnalyticsPage.jsx';
 import ProfilePage from './pages/ProfilePage.jsx';
 import BacktestPage from './pages/BacktestPage.jsx';
+import GatewayPage from './pages/Gateway.jsx';
 
 const POLYGON_AMOY_CHAIN_ID = '0x13882';
 const SOUND_KEY = 'prediction_agent_sound';
@@ -161,6 +162,7 @@ function AppInner() {
       else if (key === 'h') navigate('/history');
       else if (key === 'a') navigate('/analytics');
       else if (key === 'b') navigate('/backtest');
+      else if (key === 'g') navigate('/gateway');
       else if (key === 'p') navigate('/profile');
       else if (key === 's') {
         const dashboard = engine.getDashboard();
@@ -193,7 +195,7 @@ function AppInner() {
                 TESTNET
               </span>
               <div className="hidden sm:flex items-center gap-1 ml-4">
-                <span className="kbd">D</span><span className="kbd">H</span><span className="kbd">A</span><span className="kbd">B</span><span className="kbd">P</span>
+                <span className="kbd">D</span><span className="kbd">H</span><span className="kbd">A</span><span className="kbd">B</span><span className="kbd">G</span><span className="kbd">P</span>
                 <span className="text-[8px] text-dark-muted/40 ml-1">navigate</span>
                 <span className="kbd ml-2">S</span>
                 <span className="text-[8px] text-dark-muted/40 ml-1">start/stop</span>
@@ -234,6 +236,9 @@ function AppInner() {
               } />
               <Route path="/backtest" element={
                 <BacktestPage />
+              } />
+              <Route path="/gateway" element={
+                <GatewayPage />
               } />
               <Route path="/profile" element={
                 <ProfilePage account={account} dashboard={dashboard} bets={bets} />

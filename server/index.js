@@ -9,6 +9,7 @@ import agentRoutes from './routes/agentRoutes.js';
 import dashboardRoutes from './routes/dashboardRoutes.js';
 import signalRoutes from './routes/signalRoutes.js';
 import backtestRoutes from './routes/backtest.js';
+import gatewayRoutes from './routes/gateway.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -30,6 +31,7 @@ app.use(agentRoutes);
 app.use(dashboardRoutes);
 app.use(signalRoutes);
 app.use(backtestRoutes);
+app.use(gatewayRoutes);
 
 // Serve static frontend files from dist/
 const distPath = path.join(__dirname, '..', 'dist');

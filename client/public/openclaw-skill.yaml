@@ -1,0 +1,114 @@
+# OpenClaw Skill Definition for Prediction Agent Gateway
+# Download this file and add it to your OpenClaw agent's skills directory.
+#
+# Usage:
+#   1. Register an agent at /gateway to get your API key
+#   2. Set PREDICTION_AGENT_API_KEY in your OpenClaw agent config
+#   3. Add this skill to your agent's skills/ directory
+#   4. The agent can now call submit_prediction_signal to trade with discipline
+
+name: prediction-agent-gateway
+description: >
+  Connect to the Prediction Agent platform to submit trading signals
+  with automated risk discipline. Signals are filtered through the
+  platform's discipline engine (stop-loss, profit targets, consecutive
+  loss limits, cooldown periods) before execution.
+version: "1.0.0"
+
+config:
+  base_url:
+    description: "Base URL of the Prediction Agent platform"
+    required: true
+    default: "https://your-prediction-agent.vercel.app"
+  api_key:
+    description: "API key from agent registration"
+    required: true
+    env: PREDICTION_AGENT_API_KEY
+
+actions:
+  submit_prediction_signal:
+    description: >
+      Submit a trading signal to the Prediction Agent discipline engine.
+      The engine checks: confidence threshold, daily stop-loss, profit target,
+      consecutive losses, and cooldown before executing.
+    parameters:
+      market:
+        type: string
+        enum: [BTC, ETH, SOL]
+        description: "Market to trade"
+        required: true
+      direction:
+        type: string
+        enum: [UP, DOWN]
+        description: "Predicted price direction"
+        required: true
+      confidence:
+        type: number
+        minimum: 0
+        maximum: 100
+        description: "Signal confidence percentage (0-100)"
+        required: true
+      reasoning:
+        type: string
+        description: "Why this signal was generated"
+        required: false
+      source:
+        type: string
+        description: "Signal source identifier (e.g., ema-crossover)"
+        required: false
+    request:
+      method: POST
+      url: "{{base_url}}/api/gateway/submit-signal"
+      headers:
+        Content-Type: application/json
+        X-API-Key: "{{api_key}}"
+      body:
+        market: "{{market}}"
+        direction: "{{direction}}"
+        confidence: "{{confidence}}"
+        reasoning: "{{reasoning}}"
+        source: "{{source}}"
+    response:
+      decision: "EXECUTE, SKIP, or BLOCK"
+      decision_reason: "Why the discipline engine made this decision"
+      bet_amount: "Amount wagered (if executed)"
+      result: "WIN or LOSS (if executed)"
+      pnl: "Profit or loss from the trade"
+      bankroll: "Current bankroll after trade"
+
+  get_status:
+    description: "Get current agent status, daily stats, and limit usage"
+    parameters: {}
+    request:
+      method: GET
+      url: "{{base_url}}/api/gateway/status"
+      headers:
+        X-API-Key: "{{api_key}}"
+    response:
+      bankroll: "Current bankroll"
+      today: "Today's trading stats"
+      lifetime: "All-time stats"
+      limits: "Current limit usage and remaining capacity"
+
+  get_logs:
+    description: "Get recent signal decisions and trade history"
+    parameters:
+      limit:
+        type: number
+        description: "Number of records to return (max 200)"
+        default: 50
+        required: false
+    request:
+      method: GET
+      url: "{{base_url}}/api/gateway/logs?limit={{limit}}"
+      headers:
+        X-API-Key: "{{api_key}}"
+
+  stop_agent:
+    description: "Stop the agent. No further signals will be accepted."
+    parameters: {}
+    request:
+      method: POST
+      url: "{{base_url}}/api/gateway/stop"
+      headers:
+        X-API-Key: "{{api_key}}"
