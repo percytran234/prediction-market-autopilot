@@ -22,15 +22,15 @@ router.post('/api/gateway/register', (req, res) => {
     const walletAddress = '0x' + crypto.randomBytes(20).toString('hex');
 
     const agentConfig = {
-      max_bet_percent: config.max_bet_percent || 2,
-      daily_stop_loss: config.daily_stop_loss || 10,
-      daily_profit_target: config.daily_profit_target || 5,
-      skip_threshold: config.skip_threshold || 60,
+      max_bet_percent: config.max_bet_percent ?? 2,
+      daily_stop_loss: config.daily_stop_loss ?? 10,
+      daily_profit_target: config.daily_profit_target ?? 5,
+      skip_threshold: config.skip_threshold ?? 60,
       markets: config.markets || ['BTC'],
-      cooldown_seconds: config.cooldown_seconds || 60,
+      cooldown_seconds: config.cooldown_seconds ?? 60,
     };
 
-    const startingBankroll = config.starting_bankroll || 100;
+    const startingBankroll = config.starting_bankroll ?? 100;
 
     getDb().prepare(
       `INSERT INTO agents (agent_id, agent_name, agent_type, api_key_hash, config, wallet_address, bankroll, status)
@@ -68,12 +68,13 @@ function getAgentDailyStats(agentId, config, bankroll) {
   let skips = 0;
   let executes = 0;
   let blocks = 0;
-  let lastSignalTime = null;
+  let lastExecuteTime = null;
 
   for (const s of todaySignals) {
     if (s.decision === 'EXECUTE') {
       executes++;
       currentPnl += s.pnl || 0;
+      lastExecuteTime = s.created_at;
       if (s.result === 'WIN') {
         wins++;
         consecutiveWins++;
@@ -88,7 +89,6 @@ function getAgentDailyStats(agentId, config, bankroll) {
     } else if (s.decision === 'BLOCK') {
       blocks++;
     }
-    lastSignalTime = s.created_at;
   }
 
   // Find start of day bankroll from first signal or current bankroll
@@ -103,7 +103,7 @@ function getAgentDailyStats(agentId, config, bankroll) {
     is_paused: 0,
     pause_until: null,
     wins, losses, skips, executes, blocks,
-    lastSignalTime,
+    lastExecuteTime,
     totalToday: todaySignals.length,
   };
 }
@@ -146,14 +146,14 @@ router.post('/api/gateway/submit-signal', gatewayAuth, (req, res) => {
     };
 
     // Override thresholds from agent config
-    const stopLossPct = (config.daily_stop_loss || 10) / 100;
-    const profitTargetPct = (config.daily_profit_target || 5) / 100;
+    const stopLossPct = (config.daily_stop_loss ?? 10) / 100;
+    const profitTargetPct = (config.daily_profit_target ?? 5) / 100;
 
     let decision = 'EXECUTE';
     let decisionReason = null;
 
     // Check 1: Confidence threshold
-    const skipThreshold = config.skip_threshold || 60;
+    const skipThreshold = config.skip_threshold ?? 60;
     if (confidence < skipThreshold) {
       decision = 'SKIP';
       decisionReason = `Confidence ${confidence}% below threshold ${skipThreshold}%`;
@@ -179,10 +179,10 @@ router.post('/api/gateway/submit-signal', gatewayAuth, (req, res) => {
       decisionReason = `${dailyStats.consecutive_losses} consecutive losses — cooldown triggered`;
     }
 
-    // Check 5: Cooldown
-    if (decision === 'EXECUTE' && dailyStats.lastSignalTime) {
-      const cooldownMs = (config.cooldown_seconds || 60) * 1000;
-      const elapsed = Date.now() - new Date(dailyStats.lastSignalTime).getTime();
+    // Check 5: Cooldown (since last executed trade)
+    if (decision === 'EXECUTE' && dailyStats.lastExecuteTime) {
+      const cooldownMs = (config.cooldown_seconds ?? 60) * 1000;
+      const elapsed = Date.now() - new Date(dailyStats.lastExecuteTime).getTime();
       if (elapsed < cooldownMs) {
         decision = 'BLOCK';
         decisionReason = `Cooldown: ${Math.ceil((cooldownMs - elapsed) / 1000)}s remaining`;
@@ -196,7 +196,7 @@ router.post('/api/gateway/submit-signal', gatewayAuth, (req, res) => {
     }
 
     // Calculate bet amount
-    const betPct = (config.max_bet_percent || 2) / 100;
+    const betPct = (config.max_bet_percent ?? 2) / 100;
     let betAmount = 0;
     let result = null;
     let pnl = 0;
@@ -298,12 +298,12 @@ router.get('/api/gateway/status', gatewayAuth, (req, res) => {
           : 0,
       },
       limits: {
-        daily_stop_loss: `${config.daily_stop_loss || 10}%`,
-        daily_stop_loss_remaining: parseFloat(((dailyStats.start_bankroll * (config.daily_stop_loss || 10) / 100) + dailyStats.current_pnl).toFixed(2)),
-        daily_profit_target: `${config.daily_profit_target || 5}%`,
-        daily_profit_remaining: parseFloat(((dailyStats.start_bankroll * (config.daily_profit_target || 5) / 100) - dailyStats.current_pnl).toFixed(2)),
+        daily_stop_loss: `${config.daily_stop_loss ?? 10}%`,
+        daily_stop_loss_remaining: parseFloat(((dailyStats.start_bankroll * (config.daily_stop_loss ?? 10) / 100) + dailyStats.current_pnl).toFixed(2)),
+        daily_profit_target: `${config.daily_profit_target ?? 5}%`,
+        daily_profit_remaining: parseFloat(((dailyStats.start_bankroll * (config.daily_profit_target ?? 5) / 100) - dailyStats.current_pnl).toFixed(2)),
         consecutive_losses: `${dailyStats.consecutive_losses}/4`,
-        cooldown_seconds: config.cooldown_seconds || 60,
+        cooldown_seconds: config.cooldown_seconds ?? 60,
       },
       created_at: agent.created_at,
     });
