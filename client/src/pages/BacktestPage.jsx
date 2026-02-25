@@ -1,9 +1,8 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   AreaChart, Area, BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
   XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, ReferenceLine,
 } from 'recharts';
-import { runBacktestLocal } from '../lib/backtestEngine';
 
 function fmt(n, d = 2) { return Number(n || 0).toFixed(d); }
 
@@ -18,7 +17,7 @@ function EquityTooltip({ active, payload }) {
   return (
     <div className="terminal-card px-3 py-2 text-xs shadow-lg border border-dark-border">
       <p className="text-dark-muted">Round #{d.round}</p>
-      <p className="font-bold font-mono text-accent-green">${fmt(d.bankroll)}</p>
+      <p className="font-bold font-mono text-accent-green">${fmt(d.bankroll ?? d.strategy)}</p>
       {d.pnl !== undefined && (
         <p className={`font-mono ${d.pnl >= 0 ? 'text-accent-green' : 'text-accent-red'}`}>
           {d.pnl >= 0 ? '+' : ''}${fmt(d.pnl)}
@@ -88,6 +87,16 @@ export default function BacktestPage() {
   const [stopLoss, setStopLoss] = useState(10);
   const [takeProfit, setTakeProfit] = useState(5);
   const [startingBankroll, setStartingBankroll] = useState(100);
+  const [dataSource, setDataSource] = useState('binance');
+
+  // CLI status for Polymarket toggle
+  const [cliConnected, setCliConnected] = useState(false);
+  useEffect(() => {
+    fetch('/api/setup-status')
+      .then(r => r.json())
+      .then(d => setCliConnected(d.cli_installed || false))
+      .catch(() => {});
+  }, []);
 
   // Results state
   const [results, setResults] = useState(null);
@@ -96,12 +105,30 @@ export default function BacktestPage() {
   const [showAllBets, setShowAllBets] = useState(false);
   const [compareLoading, setCompareLoading] = useState(false);
 
+  const callBacktest = useCallback(async (opts = {}) => {
+    const body = {
+      market, days, betPercent, skipThreshold, stopLoss, takeProfit, startingBankroll,
+      dataSource,
+      ...opts,
+    };
+    const res = await fetch('/api/backtest', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+      throw new Error(err.error || `Backtest failed: ${res.status}`);
+    }
+    return res.json();
+  }, [market, days, betPercent, skipThreshold, stopLoss, takeProfit, startingBankroll, dataSource]);
+
   async function runBacktest() {
     setLoading(true);
     setError(null);
     setResults(null);
     try {
-      const data = await runBacktestLocal({ market, days, betPercent, skipThreshold, stopLoss, takeProfit, startingBankroll });
+      const data = await callBacktest();
       setResults(data);
     } catch (err) {
       setError(err.message);
@@ -112,7 +139,7 @@ export default function BacktestPage() {
   async function runComparison() {
     setCompareLoading(true);
     try {
-      const data = await runBacktestLocal({ market, days, betPercent, skipThreshold, stopLoss, takeProfit, startingBankroll, compareRandom: true });
+      const data = await callBacktest({ compareRandom: true });
       setResults(data);
     } catch (err) {
       setError(err.message);
@@ -147,6 +174,8 @@ export default function BacktestPage() {
     return merged;
   }, [results]);
 
+  const isLoading = loading || compareLoading;
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -164,7 +193,7 @@ export default function BacktestPage() {
             <label className="text-[11px] text-dark-muted uppercase tracking-wider font-semibold block mb-2">Market</label>
             <div className="flex gap-2">
               {MARKETS.map(m => (
-                <button key={m} onClick={() => setMarket(m)} disabled={loading}
+                <button key={m} onClick={() => setMarket(m)} disabled={isLoading}
                   className={`flex-1 px-3 py-2 text-xs font-bold font-mono rounded-lg border transition ${
                     market === m
                       ? 'bg-accent-green/15 text-accent-green border-accent-green/30'
@@ -176,12 +205,36 @@ export default function BacktestPage() {
             </div>
           </div>
 
+          {/* Data Source Toggle */}
+          <div>
+            <label className="text-[11px] text-dark-muted uppercase tracking-wider font-semibold block mb-2">Data Source</label>
+            <div className="flex gap-2">
+              <button onClick={() => setDataSource('binance')} disabled={isLoading}
+                className={`flex-1 px-3 py-2 text-xs font-bold font-mono rounded-lg border transition ${
+                  dataSource === 'binance'
+                    ? 'bg-accent-green/15 text-accent-green border-accent-green/30'
+                    : 'text-dark-muted border-dark-border hover:bg-dark-hover'
+                } disabled:opacity-40`}>
+                Binance
+              </button>
+              <button onClick={() => setDataSource('polymarket')} disabled={isLoading || !cliConnected}
+                className={`flex-1 px-3 py-2 text-xs font-bold font-mono rounded-lg border transition ${
+                  dataSource === 'polymarket'
+                    ? 'bg-[#ffd740]/15 text-[#ffd740] border-[#ffd740]/30'
+                    : 'text-dark-muted border-dark-border hover:bg-dark-hover'
+                } disabled:opacity-40`}
+                title={!cliConnected ? 'Polymarket CLI not installed' : ''}>
+                Polymarket {!cliConnected && '(N/A)'}
+              </button>
+            </div>
+          </div>
+
           {/* Time Period */}
           <div>
             <label className="text-[11px] text-dark-muted uppercase tracking-wider font-semibold block mb-2">Time Period</label>
             <div className="flex gap-1.5">
               {PERIODS.map(p => (
-                <button key={p} onClick={() => setDays(p)} disabled={loading}
+                <button key={p} onClick={() => setDays(p)} disabled={isLoading}
                   className={`flex-1 px-2 py-2 text-xs font-bold font-mono rounded-lg border transition ${
                     days === p
                       ? 'bg-accent-green/15 text-accent-green border-accent-green/30'
@@ -201,22 +254,22 @@ export default function BacktestPage() {
               <input
                 type="number" min={1} max={100000} value={startingBankroll}
                 onChange={e => setStartingBankroll(Math.max(1, Number(e.target.value)))}
-                disabled={loading}
+                disabled={isLoading}
                 className="w-full bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-sm font-mono text-dark-text focus:outline-none focus:border-accent-green/50 disabled:opacity-40"
               />
             </div>
           </div>
 
           {/* Sliders */}
-          <ParamSlider label="Bet Size" value={betPercent} min={1} max={10} unit="%" onChange={setBetPercent} disabled={loading} />
-          <ParamSlider label="Skip Threshold" value={skipThreshold} min={50} max={80} unit="%" onChange={setSkipThreshold} disabled={loading} />
-          <ParamSlider label="Stop Loss" value={stopLoss} min={5} max={20} unit="%" onChange={setStopLoss} disabled={loading} />
-          <ParamSlider label="Take Profit" value={takeProfit} min={3} max={15} unit="%" onChange={setTakeProfit} disabled={loading} />
+          <ParamSlider label="Bet Size" value={betPercent} min={1} max={10} unit="%" onChange={setBetPercent} disabled={isLoading} />
+          <ParamSlider label="Skip Threshold" value={skipThreshold} min={50} max={80} unit="%" onChange={setSkipThreshold} disabled={isLoading} />
+          <ParamSlider label="Stop Loss" value={stopLoss} min={5} max={20} unit="%" onChange={setStopLoss} disabled={isLoading} />
+          <ParamSlider label="Take Profit" value={takeProfit} min={3} max={15} unit="%" onChange={setTakeProfit} disabled={isLoading} />
         </div>
 
         {/* Run Button */}
-        <div className="mt-5 flex items-center gap-3">
-          <button onClick={runBacktest} disabled={loading || compareLoading}
+        <div className="mt-5 flex items-center gap-3 flex-wrap">
+          <button onClick={runBacktest} disabled={isLoading}
             className="px-8 py-3 bg-accent-green text-black text-sm font-extrabold rounded-xl hover:brightness-110 transition disabled:opacity-50 font-mono tracking-wide">
             {loading ? (
               <span className="flex items-center gap-2">
@@ -225,10 +278,15 @@ export default function BacktestPage() {
               </span>
             ) : 'Run Backtest'}
           </button>
-          {results && !compareLoading && (
-            <button onClick={runComparison} disabled={loading}
+          {results && !loading && (
+            <button onClick={runComparison} disabled={isLoading}
               className="px-5 py-3 text-xs font-bold font-mono text-dark-muted border border-dark-border rounded-xl hover:bg-dark-hover hover:text-accent-green hover:border-accent-green/30 transition disabled:opacity-40">
-              {compareLoading ? 'Running...' : 'Compare with Random'}
+              {compareLoading ? (
+                <span className="flex items-center gap-2">
+                  <span className="spinner w-3 h-3 border-2 border-dark-muted/30 border-t-dark-muted rounded-full" />
+                  Running...
+                </span>
+              ) : 'Compare with Random'}
             </button>
           )}
         </div>
@@ -241,9 +299,32 @@ export default function BacktestPage() {
         </div>
       )}
 
+      {/* Data Source Note */}
+      {results?.dataSourceNote && (
+        <div className="terminal-card p-3 border-[#ffd740]/30">
+          <p className="text-[11px] font-mono text-[#ffd740]">{results.dataSourceNote}</p>
+        </div>
+      )}
+
       {/* ─── Results Dashboard ─── */}
       {results && (
         <div className="space-y-5 animate-page-enter">
+
+          {/* Data Source Badge */}
+          {results.dataSource && (
+            <div className="flex items-center gap-2">
+              <span className={`text-[10px] font-bold font-mono px-2 py-0.5 rounded-lg border ${
+                results.dataSource === 'polymarket'
+                  ? 'text-[#ffd740] border-[#ffd740]/30 bg-[#ffd740]/10'
+                  : 'text-accent-green border-accent-green/30 bg-accent-green/10'
+              }`}>
+                {results.dataSource === 'polymarket' ? 'POLYMARKET DATA' : 'BINANCE DATA'}
+              </span>
+              <span className="text-[10px] font-mono text-dark-muted">
+                {results.params?.market} · {results.params?.days}d · {results.totalRounds} rounds
+              </span>
+            </div>
+          )}
 
           {/* Summary Cards */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -404,10 +485,10 @@ export default function BacktestPage() {
                   { label: 'Sortino Ratio', value: fmt(results.sortinoRatio, 2), color: results.sortinoRatio > 1 ? 'text-accent-green' : results.sortinoRatio > 0.5 ? 'text-accent-yellow' : 'text-accent-red' },
                   { label: 'Longest Win Streak', value: `${results.longestWinStreak}`, color: 'text-accent-green' },
                   { label: 'Longest Loss Streak', value: `${results.longestLossStreak}`, color: 'text-accent-red' },
-                  { label: 'Bet Size', value: `${betPercent}%` },
-                  { label: 'Skip Threshold', value: `${skipThreshold}%` },
-                  { label: 'Daily Stop Loss', value: `-${stopLoss}%`, color: 'text-accent-red' },
-                  { label: 'Daily Take Profit', value: `+${takeProfit}%`, color: 'text-accent-green' },
+                  { label: 'Bet Size', value: `${results.params?.betPercent ?? betPercent}%` },
+                  { label: 'Skip Threshold', value: `${results.params?.skipThreshold ?? skipThreshold}%` },
+                  { label: 'Daily Stop Loss', value: `-${results.params?.stopLoss ?? stopLoss}%`, color: 'text-accent-red' },
+                  { label: 'Daily Take Profit', value: `+${results.params?.takeProfit ?? takeProfit}%`, color: 'text-accent-green' },
                 ].map(({ label, value, color }) => (
                   <div key={label} className="flex items-center justify-between py-1 border-b border-dark-border/30">
                     <span className="text-[11px] text-dark-muted">{label}</span>
@@ -514,7 +595,7 @@ export default function BacktestPage() {
         <div className="terminal-card p-12 text-center">
           <div className="text-4xl mb-3 opacity-30">📊</div>
           <p className="text-sm text-dark-muted font-mono">Configure parameters above and hit <span className="text-accent-green">Run Backtest</span> to simulate your strategy on historical data.</p>
-          <p className="text-[10px] text-dark-muted/50 font-mono mt-2">Uses the same EMA/RSI/Volume signal engine as the live agent.</p>
+          <p className="text-[10px] text-dark-muted/50 font-mono mt-2">Uses the same EMA/RSI/Volume signal engine as the live agent. Supports Binance and Polymarket data sources.</p>
         </div>
       )}
     </div>

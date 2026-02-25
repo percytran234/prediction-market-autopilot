@@ -1,10 +1,89 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line,
 } from 'recharts';
 import { getCurrentBTCPrice } from '../engine/priceService.js';
 
 function fmt(n, d = 2) { return Number(n || 0).toFixed(d); }
+
+// ─── Execution Mode Bar ───
+const MODE_CFG = {
+  mock:  { label: 'Mock',  color: 'text-accent-green', bg: 'bg-accent-green/10', border: 'border-accent-green/30' },
+  paper: { label: 'Paper', color: 'text-[#ffd740]',    bg: 'bg-[#ffd740]/10',    border: 'border-[#ffd740]/30'    },
+  live:  { label: 'Live',  color: 'text-accent-red',   bg: 'bg-accent-red/10',   border: 'border-accent-red/30'   },
+};
+
+function ExecutionModeBar() {
+  const [setup, setSetup] = useState(null);
+  const [stopping, setStopping] = useState(false);
+
+  const fetchSetup = useCallback(() => {
+    fetch('/api/setup-status').then(r => r.json()).then(setSetup).catch(() => {});
+  }, []);
+
+  useEffect(() => { fetchSetup(); const id = setInterval(fetchSetup, 15000); return () => clearInterval(id); }, [fetchSetup]);
+
+  const mode = setup?.execution_mode || 'mock';
+  const cfg = MODE_CFG[mode] || MODE_CFG.mock;
+  const cliOk = setup?.cli_installed;
+  const paperDays = setup?.paper_trading_days || 0;
+  const requiredDays = setup?.required_paper_days || 7;
+
+  async function handleEmergencyStop() {
+    if (!confirm('EMERGENCY STOP: This will stop the agent and cancel all open orders. Continue?')) return;
+    setStopping(true);
+    try {
+      await fetch('/api/emergency-stop', { method: 'POST' });
+      fetchSetup();
+    } catch {}
+    setStopping(false);
+  }
+
+  return (
+    <div className="terminal-card p-3">
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] text-dark-muted uppercase tracking-wider font-semibold">Mode:</span>
+            {['mock', 'paper', 'live'].map(m => {
+              const mc = MODE_CFG[m];
+              const isActive = mode === m;
+              const isLocked = m === 'live' && !setup?.live_unlocked;
+              return (
+                <span key={m} className={`px-2.5 py-1 text-[10px] font-bold font-mono rounded-lg border transition ${
+                  isActive ? `${mc.bg} ${mc.color} ${mc.border}` : 'text-dark-muted border-dark-border'
+                } ${isLocked ? 'opacity-40' : ''}`}>
+                  {mc.label}{isLocked ? ' (locked)' : ''}
+                </span>
+              );
+            })}
+          </div>
+          <span className={`text-[10px] font-mono flex items-center gap-1 ${cliOk ? 'text-accent-green' : 'text-dark-muted'}`}>
+            <span className={`w-1.5 h-1.5 rounded-full ${cliOk ? 'bg-accent-green' : 'bg-dark-muted'}`} />
+            CLI {cliOk ? 'Connected' : 'Not Found'}
+          </span>
+          {mode === 'paper' && (
+            <span className="text-[10px] font-mono text-[#ffd740]">
+              Paper Day {paperDays}/{requiredDays}
+              {paperDays < requiredDays && ` — ${requiredDays - paperDays} more to unlock Live`}
+            </span>
+          )}
+        </div>
+        {(mode === 'paper' || mode === 'live') && (
+          <button onClick={handleEmergencyStop} disabled={stopping}
+            className="px-3 py-1.5 text-[10px] font-bold font-mono bg-accent-red/10 text-accent-red border border-accent-red/30 rounded-lg hover:bg-accent-red/20 transition disabled:opacity-50">
+            {stopping ? 'Stopping...' : 'EMERGENCY STOP'}
+          </button>
+        )}
+      </div>
+      {mode === 'live' && (
+        <div className="mt-2 px-3 py-2 bg-accent-red/10 border border-accent-red/30 rounded-lg">
+          <p className="text-[11px] font-bold font-mono text-accent-red text-center">LIVE TRADING — Real Money at Risk</p>
+        </div>
+      )}
+    </div>
+  );
+}
 function fmtPnl(v) {
   if (v == null) return '—';
   return (v >= 0 ? '+$' : '-$') + Math.abs(v).toFixed(2);
@@ -250,6 +329,9 @@ export default function DashboardPage({ engine, account, dashboard, bets, onConn
 
   return (
     <div className="space-y-4">
+      {/* Execution Mode Bar */}
+      <ExecutionModeBar />
+
       {/* Wallet Gate Banner */}
       {!isWalletConnected && (
         <div className="terminal-card border border-accent-green/30 p-6 text-center">

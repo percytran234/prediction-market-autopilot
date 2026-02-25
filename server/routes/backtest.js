@@ -1,10 +1,12 @@
 import { Router } from 'express';
 import { getDb } from '../db/database.js';
 import { calculateEMA, calculateRSI, calculateVolumeRatio } from '../signals/indicators.js';
+import * as cli from '../polymarket-cli.js';
 
 const router = Router();
 
 const SYMBOL_MAP = { BTC: 'BTCUSDT', ETH: 'ETHUSDT', SOL: 'SOLUSDT' };
+const MARKET_QUERIES = { BTC: 'bitcoin', ETH: 'ethereum', SOL: 'solana' };
 const VALID_DAYS = [7, 14, 30, 60, 90];
 
 // ─── Fetch historical klines from Binance ───
@@ -35,6 +37,65 @@ async function fetchHistoricalKlines(symbol, days) {
   }
 
   return generateSyntheticKlines(symbol, days, startTime);
+}
+
+// ─── Fetch historical data from Polymarket CLI ───
+
+async function fetchPolymarketKlines(market, days) {
+  if (!cli.isCliInstalled()) {
+    return { klines: null, error: 'CLI not installed', fallback: true };
+  }
+
+  const query = MARKET_QUERIES[market] || 'bitcoin';
+  let tokenId = null;
+
+  try {
+    const markets = cli.searchMarkets(query, 5);
+    if (Array.isArray(markets) && markets.length > 0) {
+      tokenId = markets[0].tokens?.[0]?.token_id || markets[0].token_id || null;
+    }
+    if (!tokenId) {
+      return { klines: null, error: 'No Polymarket token found for ' + market, fallback: true };
+    }
+
+    // Fetch price history — fidelity is number of data points
+    const fidelity = Math.min(days * 96, 2000); // up to 2000 points
+    const history = cli.getPriceHistory(tokenId, '1m', fidelity);
+
+    if (!history || (!Array.isArray(history) && !history.history)) {
+      return { klines: null, error: 'Empty price history', fallback: true };
+    }
+
+    // Normalize: CLI may return { history: [...] } or [...]
+    const points = Array.isArray(history) ? history : (history.history || []);
+    if (points.length < 61) {
+      return { klines: null, error: 'Not enough Polymarket data points', fallback: true };
+    }
+
+    // Convert to kline format: [openTime, open, high, low, close, volume, closeTime, ...]
+    // Polymarket odds are 0-1, scale to make indicators work better
+    const klines = points.map((pt, i) => {
+      const price = parseFloat(pt.price ?? pt.p ?? pt.value ?? pt) || 0.5;
+      const scaledPrice = price * 100; // scale 0-1 → 0-100 for indicator math
+      const time = pt.timestamp ?? pt.t ?? pt.time ?? (Date.now() - (points.length - i) * 15 * 60000);
+      const ts = typeof time === 'string' ? new Date(time).getTime() : time;
+      const vol = parseFloat(pt.volume ?? pt.v ?? '1') || 1;
+      return [
+        ts,
+        scaledPrice.toFixed(4),  // open
+        scaledPrice.toFixed(4),  // high
+        scaledPrice.toFixed(4),  // low
+        scaledPrice.toFixed(4),  // close
+        vol.toFixed(4),          // volume
+        ts + 15 * 60000 - 1,    // closeTime
+        '0', '0', '0', '0', '0',
+      ];
+    });
+
+    return { klines, tokenId, error: null, fallback: false };
+  } catch (err) {
+    return { klines: null, error: err.message, fallback: true };
+  }
 }
 
 // ─── Generate synthetic klines when Binance is unreachable ───
@@ -85,6 +146,7 @@ function generateSyntheticKlines(symbol, days, startTime) {
 }
 
 // ─── Run signal engine on a sliding window of klines ───
+// Reuses same indicators + scoring algorithm as server/signals/signalEngine.js
 
 function computeSignalForWindow(closes, volumes) {
   const ema5 = calculateEMA(closes, 5);
@@ -384,6 +446,8 @@ router.post('/api/backtest', async (req, res) => {
       takeProfit = 5,
       startingBankroll = 100,
       compareRandom = false,
+      dataSource = 'binance',
+      tokenId: requestedTokenId = null,
     } = req.body;
 
     // Validate inputs
@@ -396,23 +460,44 @@ router.post('/api/backtest', async (req, res) => {
     if (takeProfit < 3 || takeProfit > 15) return res.status(400).json({ error: 'takeProfit must be 3-15' });
     if (startingBankroll < 1) return res.status(400).json({ error: 'startingBankroll must be >= 1' });
 
-    const params = { market, days, betPercent, skipThreshold, stopLoss, takeProfit, startingBankroll };
+    const params = { market, days, betPercent, skipThreshold, stopLoss, takeProfit, startingBankroll, dataSource };
 
-    // Check cache (don't cache if compareRandom since it's non-deterministic)
-    const cacheKey = `${symbol}_${days}_${betPercent}_${skipThreshold}_${stopLoss}_${takeProfit}_${startingBankroll}`;
+    // Determine actual data source — resolve before caching
+    let actualDataSource = dataSource;
+    let dataSourceNote = null;
+    let klines;
+
+    if (dataSource === 'polymarket') {
+      const polyResult = await fetchPolymarketKlines(market, days);
+      if (polyResult.fallback || !polyResult.klines) {
+        actualDataSource = 'binance';
+        dataSourceNote = `Polymarket unavailable (${polyResult.error || 'unknown error'}). Using Binance data.`;
+        klines = await fetchHistoricalKlines(symbol, days);
+      } else {
+        klines = polyResult.klines;
+      }
+    } else {
+      klines = await fetchHistoricalKlines(symbol, days);
+    }
+
+    // Check cache AFTER resolving data source (so fallback uses the correct key)
+    const cacheKey = `${actualDataSource}_${symbol}_${days}_${betPercent}_${skipThreshold}_${stopLoss}_${takeProfit}_${startingBankroll}`;
     const db = getDb();
 
     if (!compareRandom) {
       const cached = db.prepare('SELECT results FROM backtests WHERE cache_key = ?').get(cacheKey);
       if (cached) {
-        return res.json(JSON.parse(cached.results));
+        const cachedResults = JSON.parse(cached.results);
+        // Attach fallback note if this was a polymarket request that fell back
+        if (dataSource === 'polymarket' && actualDataSource === 'binance') {
+          cachedResults.dataSourceNote = dataSourceNote;
+        }
+        return res.json(cachedResults);
       }
     }
 
-    // Fetch historical data
-    const klines = await fetchHistoricalKlines(symbol, days);
     if (klines.length < 61) {
-      return res.status(400).json({ error: 'Not enough historical data available from Binance for this period.' });
+      return res.status(400).json({ error: 'Not enough historical data available for this period.' });
     }
 
     // Run backtest
@@ -420,6 +505,11 @@ router.post('/api/backtest', async (req, res) => {
     if (results.error) {
       return res.status(400).json({ error: results.error });
     }
+
+    // Attach data source metadata
+    results.dataSource = actualDataSource;
+    results.dataSourceNote = dataSourceNote;
+    results.params = params;
 
     // Run random comparison if requested
     if (compareRandom) {

@@ -9,6 +9,7 @@ import HistoryPage from './pages/HistoryPage.jsx';
 import AnalyticsPage from './pages/AnalyticsPage.jsx';
 import ProfilePage from './pages/ProfilePage.jsx';
 import BacktestPage from './pages/BacktestPage.jsx';
+import PortfolioPage from './pages/Portfolio.jsx';
 import GatewayPage from './pages/Gateway.jsx';
 
 const POLYGON_AMOY_CHAIN_ID = '0x13882';
@@ -233,6 +234,9 @@ function AppInner() {
               } />
               <Route path="/analytics" element={
                 <AnalyticsPage bets={bets} />
+              } />
+              <Route path="/portfolio" element={
+                <PortfolioPage />
               } />
               <Route path="/backtest" element={
                 <BacktestPage />

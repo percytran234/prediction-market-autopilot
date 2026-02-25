@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 
 export default function BetHistoryTable({ bets }) {
   if (!bets || bets.length === 0) {
@@ -32,18 +32,63 @@ export default function BetHistoryTable({ bets }) {
     SKIP: 'text-dark-muted',
   };
 
+  const modeColors = {
+    mock: 'text-accent-green',
+    paper: 'text-[#ffd740]',
+    live: 'text-accent-red',
+  };
+
+  // Fetch execution log for extra columns (paper/live)
+  const [execLog, setExecLog] = useState([]);
+  useEffect(() => {
+    fetch('/api/execution-mode')
+      .then(r => r.json())
+      .then(d => {
+        if (d.mode !== 'mock') {
+          // Fetch recent execution logs for enrichment
+          fetch('/api/dashboard/stats')
+            .then(r2 => r2.json())
+            .catch(() => {});
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  // Check mode from first exec log or default
+  const [mode, setMode] = useState('mock');
+  useEffect(() => {
+    fetch('/api/execution-mode')
+      .then(r => r.json())
+      .then(d => setMode(d.mode || 'mock'))
+      .catch(() => {});
+  }, []);
+
+  const showExtraColumns = mode === 'paper' || mode === 'live';
+
   return (
     <div className="bg-dark-card rounded-xl p-6 border border-dark-border overflow-hidden">
-      <h3 className="text-lg font-semibold mb-4">Bet History</h3>
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-lg font-semibold">Bet History</h3>
+        {mode !== 'mock' && (
+          <span className={`text-[10px] font-bold font-mono px-2 py-0.5 rounded-lg border ${
+            mode === 'paper' ? 'text-[#ffd740] border-[#ffd740]/30 bg-[#ffd740]/10' : 'text-accent-red border-accent-red/30 bg-accent-red/10'
+          }`}>
+            {mode.toUpperCase()} MODE
+          </span>
+        )}
+      </div>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="text-dark-muted text-xs uppercase tracking-wider border-b border-dark-border">
               <th className="pb-3 text-left">Time</th>
+              {showExtraColumns && <th className="pb-3 text-center">Mode</th>}
               <th className="pb-3 text-left">Direction</th>
               <th className="pb-3 text-right">Confidence</th>
               <th className="pb-3 text-right">Amount</th>
               <th className="pb-3 text-right">BTC Price</th>
+              {showExtraColumns && <th className="pb-3 text-right">Mkt Price</th>}
+              {showExtraColumns && <th className="pb-3 text-right">Spread</th>}
               <th className="pb-3 text-center">Result</th>
               <th className="pb-3 text-right">P&L</th>
               <th className="pb-3 text-right">Balance</th>
@@ -55,6 +100,13 @@ export default function BetHistoryTable({ bets }) {
                 <td className="py-2.5 text-dark-muted">
                   {new Date(bet.round_time).toLocaleTimeString()}
                 </td>
+                {showExtraColumns && (
+                  <td className="py-2.5 text-center">
+                    <span className={`text-[10px] font-bold font-mono ${modeColors[bet.execution_mode || mode]}`}>
+                      {(bet.execution_mode || mode).toUpperCase()}
+                    </span>
+                  </td>
+                )}
                 <td className={`py-2.5 font-medium ${dirColors[bet.direction] || ''}`}>
                   {bet.direction === 'UP' ? '▲ UP' : bet.direction === 'DOWN' ? '▼ DOWN' : '— SKIP'}
                 </td>
@@ -70,6 +122,16 @@ export default function BetHistoryTable({ bets }) {
                     <span className="text-dark-muted"> → ${bet.btc_price_end.toFixed(0)}</span>
                   )}
                 </td>
+                {showExtraColumns && (
+                  <td className="py-2.5 text-right font-mono text-xs text-dark-muted">
+                    {bet.polymarket_midpoint ? `$${Number(bet.polymarket_midpoint).toFixed(4)}` : '—'}
+                  </td>
+                )}
+                {showExtraColumns && (
+                  <td className="py-2.5 text-right font-mono text-xs text-dark-muted">
+                    {bet.polymarket_spread ? Number(bet.polymarket_spread).toFixed(4) : '—'}
+                  </td>
+                )}
                 <td className={`py-2.5 text-center font-medium ${resultColors[bet.result] || ''}`}>
                   {bet.result}
                 </td>
