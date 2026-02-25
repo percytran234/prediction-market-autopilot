@@ -1,6 +1,110 @@
-import React, { useMemo, useState, useEffect, useRef } from 'react';
+import React, { useMemo, useState, useEffect, useRef, useCallback } from 'react';
 
 function fmt(n, d = 2) { return Number(n || 0).toFixed(d); }
+
+// ─── Polymarket Integration Settings ───
+const MODE_LABELS = { mock: 'Mock', paper: 'Paper', live: 'Live' };
+const MODE_COLORS = {
+  mock:  'text-accent-green',
+  paper: 'text-[#ffd740]',
+  live:  'text-accent-red',
+};
+
+function PolymarketSettings() {
+  const [setup, setSetup] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  const fetchSetup = useCallback(() => {
+    fetch('/api/setup-status')
+      .then(r => r.json())
+      .then(d => { setSetup(d); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, []);
+
+  useEffect(() => { fetchSetup(); }, [fetchSetup]);
+
+  if (loading) {
+    return (
+      <div className="terminal-card p-4">
+        <h3 className="text-xs font-semibold text-dark-muted uppercase tracking-wider mb-3">Polymarket Integration</h3>
+        <p className="text-xs text-dark-muted font-mono">Loading...</p>
+      </div>
+    );
+  }
+
+  const mode = setup?.execution_mode || 'mock';
+  const cliInstalled = setup?.cli_installed || false;
+  const walletOk = setup?.wallet_connected || false;
+  const paperDays = setup?.paper_trading_days || 0;
+  const requiredDays = setup?.required_paper_days || 7;
+  const liveGates = setup?.live_gates || {};
+
+  return (
+    <div className="terminal-card p-4 space-y-4">
+      <h3 className="text-xs font-semibold text-dark-muted uppercase tracking-wider">Polymarket Integration</h3>
+
+      {/* Status Grid */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="bg-dark-bg border border-dark-border rounded-lg p-3">
+          <p className="text-[9px] text-dark-muted uppercase tracking-widest mb-1">Mode</p>
+          <p className={`text-sm font-bold font-mono ${MODE_COLORS[mode]}`}>{MODE_LABELS[mode] || mode}</p>
+        </div>
+        <div className="bg-dark-bg border border-dark-border rounded-lg p-3">
+          <p className="text-[9px] text-dark-muted uppercase tracking-widest mb-1">CLI Status</p>
+          <div className="flex items-center gap-1.5">
+            <span className={`w-2 h-2 rounded-full ${cliInstalled ? 'bg-accent-green' : 'bg-accent-red'}`} />
+            <span className={`text-sm font-bold font-mono ${cliInstalled ? 'text-accent-green' : 'text-accent-red'}`}>
+              {cliInstalled ? 'Connected' : 'Not Found'}
+            </span>
+          </div>
+        </div>
+        <div className="bg-dark-bg border border-dark-border rounded-lg p-3">
+          <p className="text-[9px] text-dark-muted uppercase tracking-widest mb-1">Wallet</p>
+          <div className="flex items-center gap-1.5">
+            <span className={`w-2 h-2 rounded-full ${walletOk ? 'bg-accent-green' : 'bg-dark-muted'}`} />
+            <span className={`text-sm font-bold font-mono ${walletOk ? 'text-accent-green' : 'text-dark-muted'}`}>
+              {walletOk ? 'Linked' : 'None'}
+            </span>
+          </div>
+        </div>
+        <div className="bg-dark-bg border border-dark-border rounded-lg p-3">
+          <p className="text-[9px] text-dark-muted uppercase tracking-widest mb-1">Paper Days</p>
+          <p className="text-sm font-bold font-mono text-[#ffd740]">{paperDays} / {requiredDays}</p>
+        </div>
+      </div>
+
+      {/* Live Mode Gates */}
+      <div>
+        <p className="text-[10px] text-dark-muted uppercase tracking-wider font-semibold mb-2">Live Mode Requirements</p>
+        <div className="space-y-1.5">
+          {[
+            { key: 'live_confirmed', label: 'LIVE_MODE_CONFIRMED env set', ok: liveGates.live_confirmed },
+            { key: 'paper_days_met', label: `${requiredDays}+ paper trading days`, ok: liveGates.paper_days_met },
+            { key: 'cli_healthy', label: 'CLI installed & healthy', ok: liveGates.cli_healthy },
+            { key: 'wallet_has_funds', label: 'Wallet has USDC balance', ok: liveGates.wallet_has_funds },
+          ].map(g => (
+            <div key={g.key} className="flex items-center gap-2">
+              <span className={`text-xs ${g.ok ? 'text-accent-green' : 'text-dark-muted'}`}>
+                {g.ok ? '✓' : '○'}
+              </span>
+              <span className={`text-[11px] font-mono ${g.ok ? 'text-dark-text' : 'text-dark-muted'}`}>{g.label}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Setup Guide */}
+      <div className="border-t border-dark-border pt-3">
+        <p className="text-[10px] text-dark-muted font-mono leading-relaxed">
+          <span className="text-dark-text font-bold">Setup:</span> Install the Polymarket CLI
+          (<span className="text-accent-green">cargo install polymarket-cli</span>), set{' '}
+          <span className="text-accent-green">EXECUTION_MODE=paper</span> in .env, then trade for{' '}
+          {requiredDays}+ days to unlock live mode.
+        </p>
+      </div>
+    </div>
+  );
+}
 
 const USERNAME_KEY = 'prediction_agent_username';
 const JOURNAL_KEY  = 'prediction_agent_journal';
@@ -440,6 +544,9 @@ export default function ProfilePage({ account, dashboard, bets }) {
           })}
         </div>
       </div>
+
+      {/* ─── Polymarket Integration ─── */}
+      <PolymarketSettings />
 
       {/* ─── Trading Journal ─── */}
       <TradingJournal />

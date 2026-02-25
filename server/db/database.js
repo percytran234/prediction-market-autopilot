@@ -176,6 +176,39 @@ db.exec(`
     bankroll_after REAL DEFAULT 0,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
+
+  CREATE TABLE IF NOT EXISTS execution_log (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    mode TEXT NOT NULL,
+    market_slug TEXT,
+    token_id TEXT,
+    direction TEXT,
+    confidence REAL,
+    decision TEXT,
+    bet_amount_usd REAL,
+    cli_command TEXT,
+    cli_response TEXT,
+    order_id TEXT,
+    execution_price REAL,
+    slippage REAL,
+    result TEXT,
+    pnl REAL,
+    bankroll_after REAL,
+    polymarket_midpoint REAL,
+    polymarket_spread REAL,
+    binance_price REAL,
+    created_at TEXT DEFAULT (datetime('now'))
+  );
+
+  CREATE TABLE IF NOT EXISTS paper_trading_days (
+    date TEXT PRIMARY KEY,
+    rounds INTEGER DEFAULT 0,
+    wins INTEGER DEFAULT 0,
+    losses INTEGER DEFAULT 0,
+    skips INTEGER DEFAULT 0,
+    pnl REAL DEFAULT 0,
+    created_at TEXT DEFAULT (datetime('now'))
+  );
 `);
 
 export function getDb() {
