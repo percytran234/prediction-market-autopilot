@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { PieChart, Pie, Cell, AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
 function fmt(n, d = 2) { return Number(n || 0).toFixed(d); }
@@ -70,9 +71,9 @@ function RegisterModal({ open, onClose, onRegistered }) {
     onClose();
   }
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
-      <div className="terminal-card w-full max-w-lg mx-4 p-6 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+  return createPortal(
+    <div className="fixed inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm" style={{ zIndex: 9999 }} onClick={onClose}>
+      <div className="terminal-card w-full max-w-lg mx-4 p-6 max-h-[90vh] overflow-y-auto" style={{ position: 'relative', zIndex: 10000 }} onClick={e => e.stopPropagation()}>
         {!result ? (
           <>
             <h3 className="text-sm font-bold text-dark-text mb-4">Register New Agent</h3>
@@ -185,7 +186,8 @@ function RegisterModal({ open, onClose, onRegistered }) {
           </>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
