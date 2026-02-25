@@ -144,6 +144,38 @@ db.exec(`
     results TEXT NOT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
+
+  CREATE TABLE IF NOT EXISTS agents (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    agent_id TEXT UNIQUE NOT NULL,
+    agent_name TEXT NOT NULL,
+    agent_type TEXT NOT NULL DEFAULT 'custom',
+    api_key_hash TEXT NOT NULL,
+    config TEXT NOT NULL DEFAULT '{}',
+    wallet_address TEXT,
+    bankroll REAL DEFAULT 100,
+    status TEXT DEFAULT 'active',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TABLE IF NOT EXISTS agent_signals (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    agent_id TEXT NOT NULL,
+    market TEXT NOT NULL,
+    direction TEXT NOT NULL,
+    confidence REAL NOT NULL,
+    reasoning TEXT,
+    source TEXT,
+    metadata TEXT DEFAULT '{}',
+    decision TEXT NOT NULL,
+    decision_reason TEXT,
+    bet_amount REAL DEFAULT 0,
+    result TEXT,
+    pnl REAL DEFAULT 0,
+    bankroll_after REAL DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
 `);
 
 export function getDb() {
