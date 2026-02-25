@@ -11,6 +11,7 @@ import signalRoutes from './routes/signalRoutes.js';
 import backtestRoutes from './routes/backtest.js';
 import gatewayRoutes from './routes/gateway.js';
 import polymarketRoutes from './routes/polymarketRoutes.js';
+import portfolioRoutes from './routes/portfolio.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -34,6 +35,7 @@ app.use(signalRoutes);
 app.use(backtestRoutes);
 app.use(gatewayRoutes);
 app.use(polymarketRoutes);
+app.use(portfolioRoutes);
 
 // Serve static frontend files from dist/
 const distPath = path.join(__dirname, '..', 'dist');
