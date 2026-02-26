@@ -19,7 +19,7 @@ Mỗi section là 1 bước trong quá trình build sản phẩm. Với mỗi b�
 
 ## 1. Từ ý tưởng mơ hồ → Spec hoàn chỉnh trong 30 phút
 
-![Spec pivot từ DeFi sang Prediction Market](screenshots/01.png)
+https://github.com/percytran234/prediction-market-autopilot/blob/main/AI-showcase/01.png 
 
 **Tôi làm gì:** Bắt đầu với ý tưởng "DeFi Auto-Pilot" rất chung chung. Sau khi Claude viết spec xong, tôi nhận ra hướng đó quá rộng. Tôi nói 1 câu:
 
