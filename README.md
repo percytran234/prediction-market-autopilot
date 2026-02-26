@@ -686,6 +686,3 @@ This product is a **hackathon MVP demonstration**.
 - Mock and Paper modes involve **zero real funds** — no financial risk
 
 ---
-
-*Generated with Claude AI (Chat + Code).*  
-*Author: Trần Thanh Bình*
